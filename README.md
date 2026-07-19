@@ -5,8 +5,8 @@
 <h1 align="center">anatomapa</h1>
 
 <p align="center">
-  Biblioteca Python para mapas de calor anatômicos da superfície do corpo humano.
-  Zero dependências, usa só a stdlib.
+  Transforme dados de lesões e acidentes em mapas de calor sobre o corpo humano.
+  Da planilha ao SVG pronto pra publicar, em poucas linhas de Python.
 </p>
 
 <p align="center">

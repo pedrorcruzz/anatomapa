@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="am-bg" x1="0" y1="0" x2="512" y2="512" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0b1220"/>
+      <stop offset="1" stop-color="#141d33"/>
+    </linearGradient>
+    <linearGradient id="am-heat" x1="256" y1="70" x2="256" y2="470" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#38bdf8"/>
+      <stop offset="0.45" stop-color="#f59e0b"/>
+      <stop offset="1" stop-color="#ef4444"/>
+    </linearGradient>
+    <radialGradient id="am-hot">
+      <stop stop-color="#fde68a"/>
+      <stop offset="0.55" stop-color="#f97316" stop-opacity="0.5"/>
+      <stop offset="1" stop-color="#ef4444" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="116" fill="url(#am-bg)"/>
+
+  <!-- glows nas regiões quentes: mãos e pés (as mais atingidas no dado real) -->
+  <circle cx="150" cy="322" r="52" fill="url(#am-hot)"/>
+  <circle cx="362" cy="322" r="52" fill="url(#am-hot)"/>
+  <circle cx="214" cy="452" r="48" fill="url(#am-hot)"/>
+  <circle cx="298" cy="452" r="48" fill="url(#am-hot)"/>
+
+  <!-- corpo: figura de calor (frio na cabeça → quente nos pés) -->
+  <g stroke="url(#am-heat)" stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M246 196 L150 322" stroke-width="30"/>
+    <path d="M266 196 L362 322" stroke-width="30"/>
+    <path d="M246 300 L214 452" stroke-width="34"/>
+    <path d="M266 300 L298 452" stroke-width="34"/>
+    <path d="M256 176 L256 300" stroke-width="58"/>
+  </g>
+  <circle cx="256" cy="118" r="42" fill="url(#am-heat)"/>
+</svg>

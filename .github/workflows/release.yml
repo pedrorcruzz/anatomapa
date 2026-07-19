@@ -1,0 +1,56 @@
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag a publicar (ex.: v1.0.0 ou v1.0.0-beta.1)"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Publicar GitHub Release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolver tag e tipo
+        id: t
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          [ -z "$TAG" ] && TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+          if echo "$TAG" | grep -qiE '\-(beta|rc)'; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Gerar notas do release
+        id: notes
+        run: |
+          TAG="${{ steps.t.outputs.tag }}"
+          PREV=$(git tag -l 'v*' --sort=-v:refname | grep -v "^${TAG}$" | head -1)
+          if [ -n "$PREV" ]; then RANGE="${PREV}..${TAG}"; else RANGE="${TAG}"; fi
+          LIST=$(git log --no-merges --pretty=format:"- %s" "$RANGE" 2>/dev/null | grep -viE '^- Merge|promov' || true)
+          [ -z "$LIST" ] && LIST="Release ${TAG}"
+          {
+            echo "body<<CHANGELOG_EOF"
+            echo "$LIST"
+            echo "CHANGELOG_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Criar GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.t.outputs.tag }}
+          name: ${{ steps.t.outputs.tag }}
+          body: ${{ steps.notes.outputs.body }}
+          prerelease: ${{ steps.t.outputs.prerelease }}

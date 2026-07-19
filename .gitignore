@@ -1,0 +1,7 @@
+.DS_Store
+.claude/
+CLAUDE.md
+docs/sessions
+venv/
+docs/
+template/

@@ -1,8 +1,28 @@
+# OS
 .DS_Store
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+build/
+dist/
+.eggs/
+
+# Cobertura (ferramenta so-de-dev, nunca versionada)
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Ambientes virtuais
+venv/
+.venv/
+
+# Local, nao versionado por decisao do projeto
 .claude/
 CLAUDE.md
-docs/sessions
-venv/
-app/tools/
 docs/
 template/
+app/tools/

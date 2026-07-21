@@ -1,0 +1,13 @@
+anatomapa - Atribuicao de geometria
+
+As silhuetas dos modelos anatomicos SVG (body_male_anterior.svg,
+body_male_posterior.svg, body_female_anterior.svg, body_female_posterior.svg)
+foram derivadas das silhuetas humanas do projeto gganatogram, em dominio
+publico (CC0). As zonas de regiao sobre as silhuetas sao proprias do anatomapa.
+
+Fonte: gganatogram
+URL: https://github.com/jespermaag/gganatogram
+Licenca: CC0 1.0 (dominio publico)
+
+CC0 (resumo): a obra foi dedicada ao dominio publico; pode ser copiada,
+modificada e distribuida, inclusive para fins comerciais, sem pedir permissao.

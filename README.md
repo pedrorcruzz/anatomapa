@@ -17,6 +17,7 @@
 </p>
 
 <p align="center">
+  <a href="https://pypi.org/project/anatomapa/"><img alt="PyPI" src="https://img.shields.io/pypi/v/anatomapa?color=blue&logo=pypi&logoColor=white" /></a>
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=ffdd54" />
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-green" />
   <img alt="zero dependencies" src="https://img.shields.io/badge/depend%C3%AAncias-zero%20(s%C3%B3%20stdlib)-orange" />
@@ -45,14 +46,14 @@ medicina forense, queimaduras e dermatologia.
 
 ## Instalação
 
-Ainda não está no PyPI. Por enquanto, clone o repositório:
-
 ```bash
-git clone https://github.com/pedrorcruzz/anatomapa.git
-cd anatomapa
+pip install anatomapa
 ```
 
-Requer **Python 3.10+**. Nenhuma dependência externa.
+Requer **Python 3.10+** e nenhuma dependência externa.
+
+> Para desenvolvimento, clone o repositório:
+> `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
 ## Início rápido
 

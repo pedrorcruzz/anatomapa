@@ -12,10 +12,70 @@ _BILATERAL_SIDES = ("left", "right")
 
 _SVG_NS = "http://www.w3.org/2000/svg"
 
+# Fundos suportados e a fração de largura reservada à legenda (viewBox expandido)
+_VALID_BACKGROUNDS = ("dark", "light", "transparent")
+_LEGEND_WIDTH_RATIO = 0.24
+
 
 def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
     """Converte (R, G, B) para string de cor CSS em hexadecimal."""
     return "#{:02x}{:02x}{:02x}".format(*rgb)
+
+
+def _tag(elem: ET.Element) -> str:
+    """Nome da tag sem o prefixo de namespace XML."""
+    return elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
+
+
+def _validate_background(background: str) -> None:
+    """Valida o parâmetro background, levantando erro claro se for desconhecido."""
+    if background not in _VALID_BACKGROUNDS:
+        raise ValueError(
+            f"Fundo inválido: {background!r}. Use um de {list(_VALID_BACKGROUNDS)}."
+        )
+
+
+def _background_fill(background: str) -> str | None:
+    """Cor de preenchimento do fundo, ou None quando transparente (sem retângulo)."""
+    return {"dark": "#0a0a0a", "light": "#ffffff", "transparent": None}[background]
+
+
+def _legend_width(vw: float, legend: bool) -> float:
+    """Largura reservada à legenda (0 quando legend=False)."""
+    return vw * _LEGEND_WIDTH_RATIO if legend else 0.0
+
+
+def _legend_ui_colors(background: str) -> tuple[str, str, str, str]:
+    """Cores da UI da legenda adaptadas ao brilho do fundo.
+
+    Retorna (texto principal, texto secundário, borda da barra, stroke dos ticks).
+    Fundo claro usa texto escuro; fundo escuro ou transparente usa texto claro.
+    """
+    if background == "light":
+        return "#1a1a1a", "#4a4a4a", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.45)"
+    return "#f2f2f2", "#d8d8d8", "rgba(255,255,255,0.25)", "rgba(255,255,255,0.45)"
+
+
+def _append_background_rect(
+    root: ET.Element, vx: float, vy: float, total_w: float, vh: float, background: str
+) -> None:
+    """Insere um <rect> de fundo cobrindo todo o viewBox (corpo + legenda).
+
+    Nada é inserido quando background="transparent". O retângulo é sempre o
+    primeiro elemento visual (camada mais ao fundo).
+    """
+    fill = _background_fill(background)
+    if fill is None:
+        return
+    insert_at = 1 if (len(root) > 0 and _tag(root[0]) == "title") else 0
+    rect = ET.Element("rect")
+    rect.set("id", "figure-background")
+    rect.set("x", str(vx))
+    rect.set("y", str(vy))
+    rect.set("width", str(total_w))
+    rect.set("height", str(vh))
+    rect.set("fill", fill)
+    root.insert(insert_at, rect)
 
 
 def _canonical_and_side(elem_id: str) -> tuple[str, str | None]:
@@ -87,17 +147,20 @@ def _append_legend(
     vw: float,
     vh: float,
     lang: str = "pt",
+    background: str = "transparent",
 ) -> None:
     """Insere barra de gradiente VERTICAL no lado direito da figura.
 
     O viewBox do elemento raiz é expandido lateralmente para acomodar a legenda
     sem sobrepor o corpo. Design: barra vertical com gradiente (topo=máximo,
-    base=mínimo), rótulo acima e ticks numéricos à direita.
+    base=mínimo), rótulo acima e ticks numéricos à direita. As cores de texto
+    se adaptam ao brilho do fundo (background).
     """
     # Faixa reservada à direita para a legenda (viewBox expandido)
-    legend_w = vw * 0.24
+    legend_w = _legend_width(vw, True)
     new_total_w = vw + legend_w
     root.set("viewBox", f"{vx} {vy} {new_total_w} {vh}")
+    ui_main, ui_sub, ui_border, ui_tick = _legend_ui_colors(background)
 
     # Barra vertical em pílula, alta e centralizada
     bar_h = vh * 0.52
@@ -156,7 +219,7 @@ def _append_legend(
     bar_border.set("width", str(round(bar_w, 2)))
     bar_border.set("height", str(round(bar_h, 2)))
     bar_border.set("fill", "none")
-    bar_border.set("stroke", "rgba(255,255,255,0.22)")
+    bar_border.set("stroke", ui_border)
     bar_border.set("stroke-width", str(round(vw * 0.0011, 2)))
     bar_border.set("rx", str(bar_rx))
 
@@ -171,7 +234,7 @@ def _append_legend(
     label_elem.set("font-family", "Helvetica, Arial, sans-serif")
     label_elem.set("font-weight", "600")
     label_elem.set("letter-spacing", str(round(label_size * 0.08, 2)))
-    label_elem.set("fill", "#f2f2f2")
+    label_elem.set("fill", ui_main)
     label_elem.text = axis_label
 
     # Ticks: linha curta + valor, à direita da barra
@@ -191,7 +254,7 @@ def _append_legend(
         tick_line.set("y1", str(round(tick_y, 2)))
         tick_line.set("x2", str(round(tick_x_end, 2)))
         tick_line.set("y2", str(round(tick_y, 2)))
-        tick_line.set("stroke", "rgba(255,255,255,0.45)")
+        tick_line.set("stroke", ui_tick)
         tick_line.set("stroke-width", str(round(vw * 0.0011, 2)))
 
         tick_text = ET.SubElement(root, "text")
@@ -200,7 +263,7 @@ def _append_legend(
         tick_text.set("text-anchor", "start")
         tick_text.set("font-size", str(round(tick_font_size, 2)))
         tick_text.set("font-family", "Helvetica, Arial, sans-serif")
-        tick_text.set("fill", "#d6d6d6")
+        tick_text.set("fill", ui_sub)
         tick_text.text = _format_tick(tick_val)
 
 
@@ -210,31 +273,42 @@ def _build_smooth_svg(
     colormap: ColorMap,
     legend: bool,
     lang: str = "pt",
+    background: str = "transparent",
 ) -> str:
-    """Constrói SVG com degradê térmico contínuo via feGaussianBlur.
+    """Constrói o SVG do "modelo preservado": degradê térmico com bordas frias
+    e o contorno do corpo sempre nítido por cima.
 
     Estratégia de camadas (de baixo para cima):
-    1. <defs>: filtro de blur + máscara sólida do corpo.
-    2. Grupo externo com mask="url(#body-mask)": recorta tudo na silhueta do corpo.
-       - Grupo interno blurred (sem clipPath nem mask): base fria + regiões coloridas.
-         O blur age livremente antes do recorte -- sem bordas duras internas.
-    3. Linhas musculares por cima (dentro da mask): stroke escuro semitransparente
-       traça as divisões de músculo sem apagar as cores.
+    1. Fundo (opcional): retângulo cobrindo o viewBox inteiro (corpo + legenda).
+    2. Grupo com mask="url(#body-mask)" (máscara sólida = união de todos os
+       paths de região): tudo dentro nunca vaza da silhueta.
+       a. Grupo com filter="url(#thermal-blur)": base fria (cor do t=0 do
+          colormap) + uma cópia por região com a cor do dado, blur leve para
+          continuidade entre regiões vizinhas.
+       b. Camada de inner-glow frio (feFlood + feComposite operator="out" +
+          feGaussianBlur + feComposite operator="in"): brilho azul/frio que
+          gruda só nas bordas internas de cada parte, sem tocar o núcleo.
+    3. Camada NÍTIDA, fora da máscara e do blur: linhas de detalhe finas e
+       semitransparentes + contorno externo forte (fill-rule="evenodd"), para
+       o modelo nunca distorcer com o degradê.
+    4. Legenda (opcional).
 
-    Máscara body-mask: body-outline branco + todos os paths de região com stroke
-    branco grosso (~5% do vw) que fecha os vãos entre os sub-paths musculares.
-    O resultado é uma silhueta sólida e sem buracos -- borda nítida, blur apenas interno.
+    Regiões sem valor não recebem path próprio: a base fria por baixo já as
+    mantém frias, sem buracos no degradê.
 
     Saída determinística (ordem estável de ids e atributos fixos).
     """
+    _validate_background(background)
     ET.register_namespace("", _SVG_NS)
     base_root = ET.fromstring(base_svg)
 
     vx, vy, vw, vh = _parse_viewbox(base_svg)
+    legend_w = _legend_width(vw, legend)
+    total_w = vw + legend_w
 
     root = ET.Element("svg")
     root.set("xmlns", _SVG_NS)
-    root.set("viewBox", f"{vx} {vy} {vw} {vh}")
+    root.set("viewBox", f"{vx} {vy} {total_w} {vh}")
 
     if heatmap.title:
         title_elem = ET.SubElement(root, "title")
@@ -242,119 +316,133 @@ def _build_smooth_svg(
 
     defs = ET.SubElement(root, "defs")
 
-    # Desfoque: ~1.5% da largura do viewBox -- suaviza juntas entre regiões sem
-    # dissolver a forma. O recorte pela mask garante borda nítida.
-    blur_std = round(vw * 0.015, 2)
-    filter_id = "thermal-blur"
-    filt = ET.SubElement(defs, "filter")
-    filt.set("id", filter_id)
-    # Área estendida para o blur não ser cortado antes da mask
-    filt.set("x", "-10%")
-    filt.set("y", "-10%")
-    filt.set("width", "120%")
-    filt.set("height", "120%")
-    filt.set("color-interpolation-filters", "sRGB")
-    blur_elem = ET.SubElement(filt, "feGaussianBlur")
-    blur_elem.set("in", "SourceGraphic")
-    blur_elem.set("stdDeviation", str(blur_std))
-
-    cold_color = _rgb_to_hex(colormap.color_at(0.0))
-
-    # Stroke que "engorda" cada path para cobrir os vãos entre regiões (~5.0% do vw)
-    region_stroke_w = str(round(vw * 0.050, 2))
-
-    # Coleta paths do SVG base preservando geometria real
+    # Coleta paths de região do SVG base, preservando a geometria real
     base_paths: dict[str, str] = {}
     for elem in base_root.iter():
-        tag = elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
-        if tag == "g" and elem.get("id") == "regions":
+        if _tag(elem) == "g" and elem.get("id") == "regions":
             for child in elem:
-                ctag = child.tag.split("}")[-1] if "}" in child.tag else child.tag
-                if ctag == "path":
+                if _tag(child) == "path":
                     pid = child.get("id", "")
-                    pd = child.get("d", "")
                     if pid:
-                        base_paths[pid] = pd
+                        base_paths[pid] = child.get("d", "")
 
-    # Máscara sólida do corpo: body-outline branco + todos os paths de região com
-    # stroke branco grosso que fecha os vãos entre sub-paths musculares.
-    mask_id = "body-mask"
     outline_d = _extract_body_outline_d(base_svg)
+    cold_hex = _rgb_to_hex(colormap.color_at(0.0))
+
+    # Stroke que fecha os vãos entre os sub-paths na silhueta unida (~2% do vw)
+    seam_w = str(round(vw * 0.020, 2))
+    blur_std = round(vw * 0.010, 2)
+    glow_std = round(vw * 0.040, 2)
+
+    # Filtro 1: desfoque leve para continuidade do degradê entre regiões
+    blur_filter = ET.SubElement(defs, "filter")
+    blur_filter.set("id", "thermal-blur")
+    blur_filter.set("x", "-15%")
+    blur_filter.set("y", "-15%")
+    blur_filter.set("width", "130%")
+    blur_filter.set("height", "130%")
+    blur_filter.set("color-interpolation-filters", "sRGB")
+    blur_fe = ET.SubElement(blur_filter, "feGaussianBlur")
+    blur_fe.set("stdDeviation", str(blur_std))
+
+    # Filtro 2: inner-glow frio -- brilho da cor fria que gruda só por dentro
+    # das bordas (operator="out" isola a franja externa da forma) e desaparece
+    # em direção ao núcleo (operator="in" recorta de volta na forma original).
+    glow_filter = ET.SubElement(defs, "filter")
+    glow_filter.set("id", "inner-glow-cold")
+    glow_filter.set("x", "-20%")
+    glow_filter.set("y", "-20%")
+    glow_filter.set("width", "140%")
+    glow_filter.set("height", "140%")
+    glow_filter.set("color-interpolation-filters", "sRGB")
+    flood = ET.SubElement(glow_filter, "feFlood")
+    flood.set("flood-color", cold_hex)
+    flood.set("result", "cold-flood")
+    composite_out = ET.SubElement(glow_filter, "feComposite")
+    composite_out.set("in", "cold-flood")
+    composite_out.set("in2", "SourceAlpha")
+    composite_out.set("operator", "out")
+    composite_out.set("result", "outside")
+    glow_blur = ET.SubElement(glow_filter, "feGaussianBlur")
+    glow_blur.set("in", "outside")
+    glow_blur.set("stdDeviation", str(glow_std))
+    glow_blur.set("result", "blurred")
+    composite_in = ET.SubElement(glow_filter, "feComposite")
+    composite_in.set("in", "blurred")
+    composite_in.set("in2", "SourceAlpha")
+    composite_in.set("operator", "in")
+
+    # Máscara sólida do corpo: união de todos os paths de região (ordem estável)
+    # com stroke que fecha os vãos entre sub-paths -- silhueta única, sem buracos.
+    body_union_d = " ".join(base_paths[pid] for pid in sorted(base_paths))
     mask = ET.SubElement(defs, "mask")
-    mask.set("id", mask_id)
-    if outline_d:
-        mask_outline = ET.SubElement(mask, "path")
-        mask_outline.set("d", outline_d)
-        mask_outline.set("fill", "white")
-        mask_outline.set("stroke", "white")
-        mask_outline.set("stroke-width", region_stroke_w)
-        mask_outline.set("stroke-linejoin", "round")
-    for pid in sorted(base_paths):
-        mask_path = ET.SubElement(mask, "path")
-        mask_path.set("d", base_paths[pid])
-        mask_path.set("fill", "white")
-        mask_path.set("stroke", "white")
-        mask_path.set("stroke-width", region_stroke_w)
-        mask_path.set("stroke-linejoin", "round")
+    mask.set("id", "body-mask")
+    mask_path = ET.SubElement(mask, "path")
+    mask_path.set("d", body_union_d)
+    mask_path.set("fill", "white")
+    mask_path.set("stroke", "white")
+    mask_path.set("stroke-width", seam_w)
+    mask_path.set("stroke-linejoin", "round")
 
-    # Grupo externo com a máscara: recorta na silhueta do corpo (borda nítida).
-    # O blur é computado ANTES do recorte (filtro no grupo interno).
+    _append_background_rect(root, vx, vy, total_w, vh, background)
+
+    # Grupo recortado na máscara sólida: nada aqui dentro vaza da silhueta.
     masked_group = ET.SubElement(root, "g")
-    masked_group.set("mask", f"url(#{mask_id})")
+    masked_group.set("mask", "url(#body-mask)")
 
-    # Grupo interno blurred SEM clipPath nem mask: o blur age livremente dentro
-    # da área expandida do filtro antes de ser cortado pelo masked_group.
+    # Camada 1: base fria + regiões coloridas por dado, com blur leve.
     blurred_group = ET.SubElement(masked_group, "g")
-    blurred_group.set("filter", f"url(#{filter_id})")
+    blurred_group.set("filter", "url(#thermal-blur)")
 
-    # Base fria com a FORMA do corpo (body-outline). O stroke da mesma cor fecha
-    # os vãos do path composto. Se não houver body-outline, usa rect de fallback.
-    if outline_d:
-        inner_base = ET.SubElement(blurred_group, "path")
-        inner_base.set("d", outline_d)
-        inner_base.set("fill", cold_color)
-        inner_base.set("stroke", cold_color)
-        inner_base.set("stroke-width", region_stroke_w)
-        inner_base.set("stroke-linejoin", "round")
-    else:
-        inner_base = ET.SubElement(blurred_group, "rect")
-        inner_base.set("x", str(round(vx - vw * 0.15, 2)))
-        inner_base.set("y", str(round(vy - vh * 0.15, 2)))
-        inner_base.set("width", str(round(vw * 1.30, 2)))
-        inner_base.set("height", str(round(vh * 1.30, 2)))
-        inner_base.set("fill", cold_color)
+    body_base = ET.SubElement(blurred_group, "path")
+    body_base.set("d", body_union_d)
+    body_base.set("fill", cold_hex)
+    body_base.set("stroke", cold_hex)
+    body_base.set("stroke-width", seam_w)
+    body_base.set("stroke-linejoin", "round")
 
-    # Pinta todas as regiões com fill+stroke da cor correspondente.
-    # Regiões sem valor recebem a cor fria para não deixar buracos no degradê.
     for elem_id in sorted(base_paths):
         canonical_id, side = _canonical_and_side(elem_id)
         rgb = _color_for(canonical_id, side, heatmap.colors)
-        fill = _rgb_to_hex(rgb) if rgb is not None else cold_color
-
+        if rgb is None:
+            continue
+        fill = _rgb_to_hex(rgb)
         path_elem = ET.SubElement(blurred_group, "path")
         path_elem.set("id", elem_id)
         path_elem.set("d", base_paths[elem_id])
         path_elem.set("fill", fill)
         path_elem.set("stroke", fill)
-        path_elem.set("stroke-width", region_stroke_w)
+        path_elem.set("stroke-width", seam_w)
         path_elem.set("stroke-linejoin", "round")
-        path_elem.set("stroke-linecap", "round")
 
-    # Linhas musculares: stroke escuro semitransparente traça as divisões dos
-    # músculos por cima do degradê, dentro da máscara do corpo.
-    muscle_stroke_w = str(round(vw * 0.004, 2))
-    muscle_group = ET.SubElement(masked_group, "g")
-    muscle_group.set("id", "muscle-lines")
-    for pid in sorted(base_paths):
-        mp = ET.SubElement(muscle_group, "path")
-        mp.set("d", base_paths[pid])
-        mp.set("fill", "none")
-        mp.set("stroke", "rgba(0,0,0,0.35)")
-        mp.set("stroke-width", muscle_stroke_w)
-        mp.set("stroke-linejoin", "round")
+    # Camada 2: inner-glow frio por cima -- bordas frias em cada região.
+    glow_elem = ET.SubElement(masked_group, "path")
+    glow_elem.set("d", body_union_d)
+    glow_elem.set("fill", "white")
+    glow_elem.set("filter", "url(#inner-glow-cold)")
+
+    # Camada 3 (NÍTIDA, fora da máscara/blur): linhas de detalhe + contorno
+    # forte do modelo, para o corpo nunca distorcer com o degradê.
+    if outline_d:
+        detail = ET.SubElement(root, "path")
+        detail.set("id", "body-outline-detail")
+        detail.set("d", outline_d)
+        detail.set("fill", "none")
+        detail.set("stroke", "rgba(0,0,0,0.55)")
+        detail.set("stroke-width", str(round(vw * 0.004, 2)))
+        detail.set("stroke-linejoin", "round")
+
+        outline = ET.SubElement(root, "path")
+        outline.set("id", "body-outline")
+        outline.set("d", outline_d)
+        outline.set("fill", "none")
+        outline.set("stroke", "#000000")
+        outline.set("stroke-width", str(round(vw * 0.010, 2)))
+        outline.set("stroke-linejoin", "round")
+        outline.set("fill-rule", "evenodd")
 
     if legend:
-        _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang)
+        _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
 
     return ET.tostring(root, encoding="unicode")
 
@@ -392,6 +480,7 @@ class SvgRenderer:
         smooth: bool = False,
         legend: bool = False,
         colormap: ColorMap | None = None,
+        background: str = "transparent",
     ) -> Figure:
         """Aplica as cores do heatmap sobre o SVG anatômico.
 
@@ -411,18 +500,33 @@ class SvgRenderer:
             Se True, insere barra de cores com rótulos de intensidade.
         colormap:
             ColorMap usado para gerar stops da legenda e do modo smooth.
+        background:
+            Fundo da figura: "dark", "light" ou "transparent" (padrão).
 
         Returns
         -------
         Figure
             Figura renderizada encapsulando a string SVG final.
+
+        Raises
+        ------
+        ValueError
+            Se background não for "dark", "light" ou "transparent".
         """
+        _validate_background(background)
+
         if smooth and base_svg is not None and colormap is not None:
-            svg_str = _build_smooth_svg(base_svg, heatmap, colormap, legend, lang=lang)
+            svg_str = _build_smooth_svg(
+                base_svg, heatmap, colormap, legend, lang=lang, background=background
+            )
         elif base_svg is not None:
-            svg_str = self._render_onto_svg(base_svg, heatmap, model, legend, colormap, lang=lang)
+            svg_str = self._render_onto_svg(
+                base_svg, heatmap, model, legend, colormap, lang=lang, background=background
+            )
         else:
-            svg_str = self._render_from_model(heatmap, model, lang, legend, colormap)
+            svg_str = self._render_from_model(
+                heatmap, model, lang, legend, colormap, background=background
+            )
 
         return Figure(svg_str)
 
@@ -434,25 +538,28 @@ class SvgRenderer:
         legend: bool = False,
         colormap: ColorMap | None = None,
         lang: str = "pt",
+        background: str = "transparent",
     ) -> str:
         """Clona a árvore SVG e aplica as cores de preenchimento do heatmap."""
         ET.register_namespace("", _SVG_NS)
         root = ET.fromstring(base_svg)
 
-        def tag_name(elem: ET.Element) -> str:
-            return elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
-
         # Injeta título no SVG clonado quando presente
         if heatmap.title:
-            existing_titles = [e for e in root if tag_name(e) == "title"]
+            existing_titles = [e for e in root if _tag(e) == "title"]
             if not existing_titles:
                 title_elem = ET.Element("title")
                 title_elem.text = heatmap.title
                 root.insert(0, title_elem)
 
+        vx, vy, vw, vh = _parse_viewbox(base_svg)
+        legend_effective = legend and colormap is not None
+        total_w = vw + _legend_width(vw, legend_effective)
+        _append_background_rect(root, vx, vy, total_w, vh, background)
+
         def find_regions_group(root: ET.Element) -> ET.Element | None:
             for elem in root.iter():
-                if tag_name(elem) == "g" and elem.get("id") == "regions":
+                if _tag(elem) == "g" and elem.get("id") == "regions":
                     return elem
             return None
 
@@ -461,7 +568,7 @@ class SvgRenderer:
             return ET.tostring(root, encoding="unicode")
 
         for elem in regions_group:
-            if tag_name(elem) != "path":
+            if _tag(elem) != "path":
                 continue
             elem_id = elem.get("id", "")
             if not elem_id:
@@ -478,8 +585,7 @@ class SvgRenderer:
                 del elem.attrib["style"]
 
         if legend and colormap is not None:
-            vx, vy, vw, vh = _parse_viewbox(base_svg)
-            _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang)
+            _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
 
         return ET.tostring(root, encoding="unicode")
 
@@ -490,16 +596,23 @@ class SvgRenderer:
         lang: str,
         legend: bool = False,
         colormap: ColorMap | None = None,
+        background: str = "transparent",
     ) -> str:
         """Constrói o SVG do zero a partir da geometria do modelo quando não há SVG base."""
         ET.register_namespace("", _SVG_NS)
+        vx, vy, vw, vh = 0.0, 0.0, 400.0, 900.0
+        legend_effective = legend and colormap is not None
+        total_w = vw + _legend_width(vw, legend_effective)
+
         root = ET.Element("svg")
         root.set("xmlns", _SVG_NS)
-        root.set("viewBox", "0 0 400 900")
+        root.set("viewBox", f"{vx} {vy} {total_w} {vh}")
 
         if heatmap.title:
             title_elem = ET.SubElement(root, "title")
             title_elem.text = heatmap.title
+
+        _append_background_rect(root, vx, vy, total_w, vh, background)
 
         regions_group = ET.SubElement(root, "g")
         regions_group.set("id", "regions")
@@ -531,6 +644,6 @@ class SvgRenderer:
                 path_elem.set("fill", fill)
 
         if legend and colormap is not None:
-            _append_legend(root, heatmap, colormap, 0.0, 0.0, 400.0, 900.0, lang=lang)
+            _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
 
         return ET.tostring(root, encoding="unicode")

@@ -461,15 +461,20 @@ class TestBuildSmoothSvgUnit(unittest.TestCase):
         except ET.ParseError as e:
             self.fail(f"SVG inválido: {e}")
 
-    def test_smooth_without_outline_uses_rect_fallback(self):
-        # Sem body-outline, a camada interna deve ser um rect (fallback)
+    def test_smooth_without_outline_has_no_sharp_contour(self):
+        # A máscara sólida é a união dos paths de região (não depende do
+        # body-outline). Sem body-outline no SVG base, a camada nítida de
+        # contorno (body-outline/body-outline-detail) simplesmente não é
+        # desenhada, mas o degradê e a máscara continuam funcionando.
         from anatomapa.render.svg import _build_smooth_svg
         cmap = self._make_colormap()
         hm = self._make_hm({"head": (255, 0, 0)})
         svg = _build_smooth_svg(self._svg_without_outline(), hm, cmap, legend=False)
         root = ET.fromstring(svg)
-        rects = [e for e in root.iter() if _tag(e) == "rect"]
-        self.assertGreater(len(rects), 0, "Fallback rect ausente quando sem body-outline")
+        outline_paths = [e for e in root.iter() if e.get("id") == "body-outline"]
+        self.assertEqual(len(outline_paths), 0)
+        masks = [e for e in root.iter() if _tag(e) == "mask" and e.get("id") == "body-mask"]
+        self.assertGreater(len(masks), 0, "Máscara sólida ausente mesmo sem body-outline")
 
     def test_smooth_without_outline_valid_xml(self):
         from anatomapa.render.svg import _build_smooth_svg
@@ -481,35 +486,35 @@ class TestBuildSmoothSvgUnit(unittest.TestCase):
         except ET.ParseError as e:
             self.fail(f"SVG sem outline inválido: {e}")
 
-    def test_smooth_with_outline_no_curtain_no_evenodd(self):
-        # Sem curtain (evenodd): body-outline como curtain criaria linhas escuras
-        # nos sub-paths musculares. As linhas musculares agora são deliberadas
-        # (grupo muscle-lines), não efeito colateral de curtain.
+    def test_smooth_with_outline_has_evenodd_sharp_contour(self):
+        # A camada NÍTIDA por cima usa fill-rule="evenodd" no contorno forte
+        # do body-outline -- técnica do "modelo preservado" para o corpo nunca
+        # distorcer com o degradê. Deve estar fora da máscara/blur (filho direto
+        # da raiz), não dentro do masked_group.
         from anatomapa.render.svg import _build_smooth_svg
         cmap = self._make_colormap()
         hm = self._make_hm({"head": (200, 100, 50)})
         svg = _build_smooth_svg(self._svg_with_outline(), hm, cmap, legend=False)
-        self.assertNotIn("evenodd", svg)
+        self.assertIn("evenodd", svg)
         root = ET.fromstring(svg)
-        # Linhas musculares devem estar no grupo muscle-lines, não espalhadas
-        muscle_groups = [e for e in root.iter() if _tag(e) == "g" and e.get("id") == "muscle-lines"]
-        self.assertGreater(len(muscle_groups), 0, "Grupo muscle-lines ausente")
+        outline = next((e for e in root if e.get("id") == "body-outline"), None)
+        self.assertIsNotNone(outline, "Contorno nítido body-outline ausente como filho da raiz")
+        self.assertEqual(outline.get("fill-rule"), "evenodd")
+        self.assertEqual(outline.get("fill"), "none")
 
-    def test_smooth_muscle_lines_in_output(self):
-        # Linhas musculares (fill=none, stroke escuro) devem estar presentes no
-        # grupo muscle-lines para definição anatômica por cima do degradê.
+    def test_smooth_has_sharp_detail_lines(self):
+        # Linhas de detalhe finas e semitransparentes (fill=none, stroke rgba)
+        # ficam por cima do degradê, fora da máscara/blur, para definição
+        # anatômica sem distorcer o modelo.
         from anatomapa.render.svg import _build_smooth_svg
         cmap = self._make_colormap()
         hm = self._make_hm({})
         svg = _build_smooth_svg(self._svg_with_outline(), hm, cmap, legend=False)
         root = ET.fromstring(svg)
-        muscle_groups = [e for e in root.iter() if _tag(e) == "g" and e.get("id") == "muscle-lines"]
-        self.assertGreater(len(muscle_groups), 0, "Grupo muscle-lines ausente")
-        lines = [p for g in muscle_groups for p in g if _tag(p) == "path"]
-        self.assertGreater(len(lines), 0, "Nenhuma linha muscular encontrada")
-        for line in lines:
-            self.assertEqual(line.get("fill"), "none")
-            self.assertIsNotNone(line.get("stroke"))
+        detail = next((e for e in root if e.get("id") == "body-outline-detail"), None)
+        self.assertIsNotNone(detail, "Camada de detalhe body-outline-detail ausente")
+        self.assertEqual(detail.get("fill"), "none")
+        self.assertIn("rgba", detail.get("stroke", ""))
 
     def test_smooth_bilateral_suffix_stripped(self):
         from anatomapa.render.svg import _build_smooth_svg
@@ -551,6 +556,101 @@ class TestBuildSmoothSvgUnit(unittest.TestCase):
         hm = self._make_hm({"head": (255, 0, 0)})
         svg = _build_smooth_svg(self._svg_with_outline(), hm, cmap, legend=True)
         self.assertIn("linearGradient", svg)
+
+    def test_smooth_has_inner_glow_cold_filter(self):
+        # O filtro de inner-glow frio usa feFlood + feComposite (out/in) +
+        # feGaussianBlur -- a técnica do "modelo preservado" para bordas frias.
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        svg = _build_smooth_svg(self._svg_with_outline(), hm, cmap, legend=False)
+        root = ET.fromstring(svg)
+        glow = next(
+            (e for e in root.iter() if _tag(e) == "filter" and e.get("id") == "inner-glow-cold"),
+            None,
+        )
+        self.assertIsNotNone(glow, "Filtro inner-glow-cold ausente")
+        children_tags = [_tag(c) for c in glow]
+        self.assertIn("feFlood", children_tags)
+        self.assertIn("feGaussianBlur", children_tags)
+        composites = [c for c in glow if _tag(c) == "feComposite"]
+        operators = {c.get("operator") for c in composites}
+        self.assertEqual(operators, {"out", "in"})
+
+    def test_smooth_two_gaussian_blurs(self):
+        # Dois feGaussianBlur: um no blur base (continuidade), outro no
+        # inner-glow (franja fria).
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        svg = _build_smooth_svg(self._svg_with_outline(), hm, cmap, legend=False)
+        root = ET.fromstring(svg)
+        blurs = [e for e in root.iter() if _tag(e) == "feGaussianBlur"]
+        self.assertEqual(len(blurs), 2)
+
+    def test_smooth_no_value_region_has_no_own_path(self):
+        # Regiões sem valor não recebem path próprio dentro do grupo blurred:
+        # a base fria por baixo já cobre a área, sem buracos no degradê.
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        base = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900">'
+            '<path id="body-outline" d="M 0 0 Z" />'
+            '<g id="regions">'
+            '<path id="head" d="M 10 10 Z" />'
+            '<path id="trunk" d="M 20 20 Z" />'
+            "</g>"
+            "</svg>"
+        )
+        svg = _build_smooth_svg(base, hm, cmap, legend=False)
+        root = ET.fromstring(svg)
+        trunk_paths = [e for e in root.iter() if e.get("id") == "trunk"]
+        self.assertEqual(len(trunk_paths), 0)
+
+    def test_smooth_background_dark_draws_rect(self):
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        svg = _build_smooth_svg(
+            self._svg_with_outline(), hm, cmap, legend=False, background="dark"
+        )
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#0a0a0a")
+
+    def test_smooth_background_light_draws_white_rect(self):
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        svg = _build_smooth_svg(
+            self._svg_with_outline(), hm, cmap, legend=False, background="light"
+        )
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#ffffff")
+
+    def test_smooth_background_transparent_draws_no_rect(self):
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        svg = _build_smooth_svg(
+            self._svg_with_outline(), hm, cmap, legend=False, background="transparent"
+        )
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNone(bg)
+
+    def test_smooth_background_invalid_raises(self):
+        from anatomapa.render.svg import _build_smooth_svg
+        cmap = self._make_colormap()
+        hm = self._make_hm({"head": (255, 0, 0)})
+        with self.assertRaises(ValueError):
+            _build_smooth_svg(
+                self._svg_with_outline(), hm, cmap, legend=False, background="pink"
+            )
 
 
 class TestFigureSave(unittest.TestCase):

@@ -42,20 +42,21 @@ class TestThermalColormap(unittest.TestCase):
         self.assertLess(g, 30)
         self.assertGreater(b, 30)
 
-    def test_thermal_at_one_is_white(self):
+    def test_thermal_at_one_is_orange(self):
+        # Topo da escala agora é laranja (sem branco), fechando o degradê quente
         r, g, b = self.cmap.color_at(1.0)
         self.assertGreater(r, 240)
-        self.assertGreater(g, 240)
-        self.assertGreater(b, 240)
+        self.assertLess(g, 190)
+        self.assertLess(b, 80)
 
     def test_thermal_at_half_is_greenish(self):
-        # t=0.5 mapeia para verde puro (0, 255, 0)
+        # t=0.5 mapeia para verde (0, 215, 120)
         r, g, b = self.cmap.color_at(0.5)
         self.assertGreater(g, 150)
         self.assertLess(r, 150)
 
     def test_thermal_at_09_is_reddish(self):
-        # t=0.9 mapeia para vermelho (255, 0, 0)
+        # t=0.9 mapeia para laranja (255, 175, 0): quente, sem azul
         r, g, b = self.cmap.color_at(0.9)
         self.assertGreater(r, 200)
         self.assertLess(b, 100)
@@ -74,16 +75,16 @@ class TestThermalColormap(unittest.TestCase):
             self.assertLessEqual(ch, 255)
 
     def test_thermal_at_015_is_blue(self):
-        # t=0.15 mapeia para azul puro (0, 0, 255)
+        # t=0.15 fica no segmento inicial (frio, azul dominante): b alto, r baixo
         r, g, b = self.cmap.color_at(0.15)
         self.assertGreater(b, 200)
         self.assertLess(r, 50)
-        self.assertLess(g, 50)
+        self.assertLess(g, 60)
 
     def test_thermal_at_030_is_cyan(self):
-        # t=0.30 mapeia para ciano (0, 255, 255)
+        # t=0.30 fica no segmento azul->ciano: b alto, g já significativo, r baixo
         r, g, b = self.cmap.color_at(0.30)
-        self.assertGreater(g, 200)
+        self.assertGreater(g, 100)
         self.assertGreater(b, 200)
         self.assertLess(r, 50)
 
@@ -178,6 +179,52 @@ class TestBodyParameter(unittest.TestCase):
         self.assertIsNot(male, female)
 
 
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de background")
+class TestBackgroundFacade(unittest.TestCase):
+    """Testa o parâmetro background via a facade heatmap(), fim a fim."""
+
+    def test_dark_background_flat_mode(self):
+        import anatomapa
+        svg = str(anatomapa.heatmap({"head": 10}, background="dark"))
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#0a0a0a")
+
+    def test_light_background_smooth_mode(self):
+        import anatomapa
+        svg = str(anatomapa.heatmap(
+            {"head": 10, "trunk": 50}, smooth=True, cmap="thermal", background="light",
+        ))
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#ffffff")
+
+    def test_transparent_is_default_no_rect(self):
+        import anatomapa
+        svg = str(anatomapa.heatmap({"head": 10}))
+        root = ET.fromstring(svg)
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNone(bg)
+
+    def test_invalid_background_raises(self):
+        import anatomapa
+        with self.assertRaises(ValueError):
+            anatomapa.heatmap({"head": 10}, background="chartreuse")
+
+    def test_background_and_legend_combined_valid_xml(self):
+        import anatomapa
+        svg = str(anatomapa.heatmap(
+            {"head": 10, "trunk": 50}, smooth=True, cmap="thermal",
+            background="dark", legend=True,
+        ))
+        try:
+            ET.fromstring(svg)
+        except ET.ParseError as e:
+            self.fail(f"SVG smooth+background+legend inválido: {e}")
+
+
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de smooth")
 class TestSmoothMode(unittest.TestCase):
     """Testa o modo smooth (degradê contínuo)."""
@@ -223,20 +270,18 @@ class TestSmoothMode(unittest.TestCase):
         svg2 = str(anatomapa.heatmap(values, smooth=True))
         self.assertEqual(svg1, svg2)
 
-    def test_smooth_has_muscle_lines(self):
-        # Linhas musculares (fill=none, stroke escuro, grupo muscle-lines) devem
-        # estar presentes por cima do degradê para definição anatômica.
+    def test_smooth_has_sharp_outline_layer(self):
+        # A camada NÍTIDA (contorno forte + linhas de detalhe) fica por cima do
+        # degradê, fora da máscara/blur, para o modelo nunca distorcer.
         svg = self._smooth_svg()
         root = ET.fromstring(svg)
-        muscle_groups = [
-            e for e in root.iter()
-            if _tag(e) == "g" and e.get("id") == "muscle-lines"
-        ]
-        self.assertGreater(len(muscle_groups), 0, "Grupo muscle-lines ausente")
-        muscle_paths = [p for g in muscle_groups for p in g if _tag(p) == "path"]
-        self.assertGreater(len(muscle_paths), 0, "Nenhuma linha muscular")
-        for p in muscle_paths:
-            self.assertEqual(p.get("fill"), "none")
+        outline = next((e for e in root if e.get("id") == "body-outline"), None)
+        self.assertIsNotNone(outline, "Contorno nítido body-outline ausente")
+        self.assertEqual(outline.get("fill"), "none")
+        self.assertEqual(outline.get("fill-rule"), "evenodd")
+        detail = next((e for e in root if e.get("id") == "body-outline-detail"), None)
+        self.assertIsNotNone(detail, "Linhas de detalhe body-outline-detail ausentes")
+        self.assertEqual(detail.get("fill"), "none")
 
     def test_smooth_female_is_valid_xml(self):
         svg = self._smooth_svg(body="female")
@@ -259,8 +304,8 @@ class TestSmoothMode(unittest.TestCase):
         self.assertNotIn("feGaussianBlur", svg)
 
     def test_smooth_base_cold_present(self):
-        # Uma base com a cor fria (path do body-outline, ou rect de fallback) deve
-        # estar presente como base do degradê.
+        # A base fria (união de todos os paths de região, sem id próprio) deve
+        # estar presente como camada de fundo do degradê.
         from anatomapa.color.registry import get_colormap
         cmap = get_colormap("thermal")
         cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
@@ -273,36 +318,25 @@ class TestSmoothMode(unittest.TestCase):
         ]
         self.assertGreaterEqual(len(bases), 1, "Base fria ausente no grupo blurred")
 
-    def test_smooth_regions_without_value_painted_cold(self):
-        # Regiões sem valor devem ser pintadas com a cor fria dentro do grupo blurred
-        # (fill+stroke da cor fria fecham os vãos antes do blur, eliminando linhas escuras).
+    def test_smooth_regions_without_value_have_no_own_path(self):
+        # Regiões sem valor (ex.: trunk, quando só "head" tem dado) não recebem
+        # path próprio dentro do grupo blurred: a base fria por baixo já cobre
+        # a área, sem deixar buraco no degradê.
         import anatomapa
-        from anatomapa.color.registry import get_colormap
-        cmap = get_colormap("thermal")
-        cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
         # Passa apenas head; trunk e outros nao tem valor
         svg = str(anatomapa.heatmap({"head": 100}, body="male", smooth=True, cmap="thermal"))
         root = ET.fromstring(svg)
-        # Localiza o grupo blurred
         blurred_group = None
         for e in root.iter():
             if _tag(e) == "g" and "thermal-blur" in e.get("filter", ""):
                 blurred_group = e
                 break
         self.assertIsNotNone(blurred_group, "Grupo blurred nao encontrado")
-        # Paths sem "head" no id devem ter fill=cor_fria (nao deixam buraco escuro)
-        non_head_paths = [
-            p for p in blurred_group
-            if _tag(p) == "path" and "head" not in p.get("id", "")
-        ]
-        for p in non_head_paths:
-            self.assertEqual(
-                p.get("fill"), cold_hex,
-                f"Regiao sem valor deveria ter fill frio, id={p.get('id')}",
-            )
+        trunk_paths = [p for p in blurred_group if p.get("id") == "trunk"]
+        self.assertEqual(trunk_paths, [], "trunk sem valor não deveria ter path próprio")
 
     def test_smooth_regions_with_value_have_matching_stroke(self):
-        # Regioes com valor devem ter stroke=fill para fechar os vaos entre musculos.
+        # Regioes com valor tem stroke=fill para fechar os vãos na silhueta unida.
         # Usa dois valores distintos para que head (100) nao fique em t=0 (cor fria).
         import anatomapa
         from anatomapa.color.registry import get_colormap
@@ -332,16 +366,17 @@ class TestSmoothMode(unittest.TestCase):
             )
 
     def test_smooth_blur_std_is_moderate(self):
-        # stdDeviation deve estar entre 2% e 6% da largura do viewBox. O stroke
-        # nas regioes fecha os vaos antes do blur, entao nao e necessario um
-        # stdDeviation alto. viewBox do male anterior: largura ~663 -> 3% ~ 19.9.
+        # Dois filtros usam feGaussianBlur: o blur base (thermal-blur, leve,
+        # ~1% do vw) e o inner-glow frio (inner-glow-cold, mais largo, ~4% do
+        # vw). Ambos devem ficar num intervalo moderado da largura do viewBox.
         svg = self._smooth_svg()
         root = ET.fromstring(svg)
         blurs = [e for e in root.iter() if _tag(e) == "feGaussianBlur"]
-        self.assertEqual(len(blurs), 1)
-        std = float(blurs[0].get("stdDeviation", "0"))
-        self.assertGreater(std, 5.0, "Desfoque insuficiente")
-        self.assertLess(std, 100.0, "Desfoque excessivo")
+        self.assertEqual(len(blurs), 2)
+        for blur in blurs:
+            std = float(blur.get("stdDeviation", "0"))
+            self.assertGreater(std, 1.0, "Desfoque insuficiente")
+            self.assertLess(std, 100.0, "Desfoque excessivo")
 
     def test_smooth_with_legend_is_valid_xml(self):
         import anatomapa
@@ -398,29 +433,27 @@ class TestSmoothMode(unittest.TestCase):
         masks = [e for e in root.iter() if _tag(e) == "mask" and e.get("id") == "body-mask"]
         self.assertGreater(len(masks), 0, "body-mask ausente no body=female")
 
-    def test_smooth_muscle_lines_have_no_fill(self):
-        # Todas as linhas musculares devem ter fill="none" para não cobrir o degradê.
+    def test_smooth_detail_lines_have_no_fill(self):
+        # As linhas de detalhe do contorno nítido têm fill="none" para não
+        # cobrir o degradê por baixo.
         svg = self._smooth_svg()
         root = ET.fromstring(svg)
-        muscle_groups = [e for e in root.iter() if _tag(e) == "g" and e.get("id") == "muscle-lines"]
-        self.assertGreater(len(muscle_groups), 0)
-        for mg in muscle_groups:
-            for path in mg:
-                if _tag(path) == "path":
-                    self.assertEqual(path.get("fill"), "none")
+        detail = next((e for e in root if e.get("id") == "body-outline-detail"), None)
+        self.assertIsNotNone(detail)
+        self.assertEqual(detail.get("fill"), "none")
 
-    def test_smooth_muscle_lines_stroke_is_semitransparent(self):
-        # O stroke das linhas musculares deve ser semitransparente (rgba com alpha < 1).
+    def test_smooth_detail_lines_stroke_is_semitransparent(self):
+        # O stroke das linhas de detalhe é semitransparente (rgba com alpha < 1),
+        # já o contorno externo forte é sólido (preto opaco).
         svg = self._smooth_svg()
         self.assertIn("rgba", svg)
         root = ET.fromstring(svg)
-        muscle_groups = [e for e in root.iter() if _tag(e) == "g" and e.get("id") == "muscle-lines"]
-        self.assertGreater(len(muscle_groups), 0)
-        for mg in muscle_groups:
-            for path in mg:
-                if _tag(path) == "path":
-                    stroke = path.get("stroke", "")
-                    self.assertIn("rgba", stroke, f"Stroke não semitransparente: {stroke}")
+        detail = next((e for e in root if e.get("id") == "body-outline-detail"), None)
+        self.assertIsNotNone(detail)
+        self.assertIn("rgba", detail.get("stroke", ""))
+        outline = next((e for e in root if e.get("id") == "body-outline"), None)
+        self.assertIsNotNone(outline)
+        self.assertEqual(outline.get("stroke"), "#000000")
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de legend")
@@ -906,6 +939,108 @@ class TestSvgRendererNewParams(unittest.TestCase):
         self.assertIn("linearGradient", svg)
         ET.fromstring(svg)
 
+
+class TestBackgroundParameter(unittest.TestCase):
+    """Testa o parâmetro background no SvgRenderer (modo flat e smooth)."""
+
+    def _make_model(self):
+        from anatomapa.domain.model import AnatomicalModel
+        from anatomapa.domain.region import Region
+        return AnatomicalModel(
+            _regions=(
+                Region(
+                    id="head",
+                    label_pt="Cabeça",
+                    label_en="Head",
+                    aliases=(),
+                    bilateral=False,
+                    parent=None,
+                    geometry={"center": "M 10 10 Z"},
+                ),
+            )
+        )
+
+    def _make_heatmap(self):
+        from anatomapa.domain.heatmap import Heatmap
+        return Heatmap(
+            colors={"head": (200, 50, 50)},
+            scale_name="linear",
+            value_min=0.0,
+            value_max=100.0,
+            lang="pt",
+        )
+
+    def _base_svg(self):
+        return (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900">'
+            '<g id="regions"><path id="head" d="M 0 0 Z" /></g>'
+            '</svg>'
+        )
+
+    def test_render_invalid_background_raises(self):
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        with self.assertRaises(ValueError):
+            renderer.render(self._make_heatmap(), self._make_model(), background="purple")
+
+    def test_onto_svg_dark_background_draws_rect(self):
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        fig = renderer.render(
+            self._make_heatmap(), self._make_model(),
+            base_svg=self._base_svg(), background="dark",
+        )
+        root = ET.fromstring(str(fig))
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#0a0a0a")
+
+    def test_onto_svg_transparent_background_no_rect(self):
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        fig = renderer.render(
+            self._make_heatmap(), self._make_model(), base_svg=self._base_svg(),
+        )
+        root = ET.fromstring(str(fig))
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNone(bg)
+
+    def test_from_model_light_background_draws_white_rect(self):
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        fig = renderer.render(self._make_heatmap(), self._make_model(), background="light")
+        root = ET.fromstring(str(fig))
+        bg = next((e for e in root if e.get("id") == "figure-background"), None)
+        self.assertIsNotNone(bg)
+        self.assertEqual(bg.get("fill"), "#ffffff")
+
+    def test_legend_text_dark_on_light_background(self):
+        from anatomapa.render.svg import SvgRenderer
+        from anatomapa.color.registry import get_colormap
+        renderer = SvgRenderer()
+        cmap = get_colormap("reds")
+        fig = renderer.render(
+            self._make_heatmap(), self._make_model(),
+            legend=True, colormap=cmap, background="light",
+        )
+        root = ET.fromstring(str(fig))
+        label = next((e for e in root.iter() if e.get("id") == "legend-label"), None)
+        self.assertIsNotNone(label)
+        self.assertEqual(label.get("fill"), "#1a1a1a")
+
+    def test_legend_text_light_on_dark_background(self):
+        from anatomapa.render.svg import SvgRenderer
+        from anatomapa.color.registry import get_colormap
+        renderer = SvgRenderer()
+        cmap = get_colormap("reds")
+        fig = renderer.render(
+            self._make_heatmap(), self._make_model(),
+            legend=True, colormap=cmap, background="dark",
+        )
+        root = ET.fromstring(str(fig))
+        label = next((e for e in root.iter() if e.get("id") == "legend-label"), None)
+        self.assertIsNotNone(label)
+        self.assertEqual(label.get("fill"), "#f2f2f2")
 
 
 if __name__ == "__main__":

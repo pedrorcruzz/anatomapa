@@ -55,6 +55,7 @@ def heatmap(
     title: str | None = None,
     smooth: bool = False,
     legend: bool = False,
+    background: str = "transparent",
     on_unknown: str = "error",
     region_map: dict[str, str] | None = None,
     assets_dir: str | None = None,
@@ -83,6 +84,9 @@ def heatmap(
         Se True, aplica degradê térmico contínuo com feGaussianBlur em vez de cores chapadas.
     legend:
         Se True, insere barra de cores com rótulos de intensidade (mínimo e máximo) na figura.
+    background:
+        Fundo da figura: "dark" (escuro), "light" (claro) ou "transparent" (padrão, sem
+        retângulo de fundo). As cores de texto da legenda se adaptam ao fundo escolhido.
     on_unknown:
         Política para rótulos não reconhecidos: "error" (padrão, levanta
         ResolutionError listando todos), "skip" (ignora em silêncio) ou "warn"
@@ -103,7 +107,7 @@ def heatmap(
     ResolutionError
         Se algum rótulo em values não puder ser resolvido para um id de região conhecido.
     ValueError
-        Se os nomes de view, body, cmap ou scale forem desconhecidos.
+        Se os nomes de view, body, cmap, scale ou background forem desconhecidos.
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
@@ -157,6 +161,7 @@ def heatmap(
         smooth=smooth,
         legend=legend,
         colormap=colormap,
+        background=background,
     )
 
 

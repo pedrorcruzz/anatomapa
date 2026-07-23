@@ -66,7 +66,7 @@ def _append_legend(
     vh: float,
     lang: str = "pt",
 ) -> None:
-    """Insere barra de gradiente VERTICAL no lado direito da figura (estilo gganatogram).
+    """Insere barra de gradiente VERTICAL no lado direito da figura.
 
     O viewBox do elemento raiz é expandido lateralmente para acomodar a legenda
     sem sobrepor o corpo. Design: barra vertical com gradiente (topo=máximo,

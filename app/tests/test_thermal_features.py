@@ -425,7 +425,7 @@ class TestSmoothMode(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de legend")
 class TestLegend(unittest.TestCase):
-    """Testa a legenda vertical no estilo gganatogram."""
+    """Testa a legenda vertical de valores."""
 
     def _legend_svg(self, values=None, **kwargs):
         import anatomapa

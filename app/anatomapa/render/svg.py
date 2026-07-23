@@ -18,6 +18,28 @@ def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
 
+def _canonical_and_side(elem_id: str) -> tuple[str, str | None]:
+    """Separa o id do path em (id canônico, lado), onde lado é 'left', 'right' ou None."""
+    for suffix, side in (("-left", "left"), ("-right", "right")):
+        if elem_id.endswith(suffix):
+            return elem_id[: -len(suffix)], side
+    return elem_id, None
+
+
+def _color_for(
+    canonical: str,
+    side: str | None,
+    colors: dict[str, tuple[int, int, int]],
+) -> tuple[int, int, int] | None:
+    """Cor de um path: usa a chave lateralizada (ex.: 'hand_left') se existir,
+    senão cai na chave canônica ('hand'). Retorna None se nenhuma tiver valor."""
+    if side is not None:
+        key = f"{canonical}_{side}"
+        if key in colors:
+            return colors[key]
+    return colors.get(canonical)
+
+
 def _parse_viewbox(svg_string: str) -> tuple[float, float, float, float]:
     """Extrai min-x, min-y, largura e altura do atributo viewBox do SVG."""
     try:
@@ -308,16 +330,9 @@ def _build_smooth_svg(
     # Pinta todas as regiões com fill+stroke da cor correspondente.
     # Regiões sem valor recebem a cor fria para não deixar buracos no degradê.
     for elem_id in sorted(base_paths):
-        canonical_id = elem_id
-        for suffix in ("-left", "-right"):
-            if elem_id.endswith(suffix):
-                canonical_id = elem_id[: -len(suffix)]
-                break
-
-        if canonical_id in heatmap.colors:
-            fill = _rgb_to_hex(heatmap.colors[canonical_id])
-        else:
-            fill = cold_color
+        canonical_id, side = _canonical_and_side(elem_id)
+        rgb = _color_for(canonical_id, side, heatmap.colors)
+        fill = _rgb_to_hex(rgb) if rgb is not None else cold_color
 
         path_elem = ET.SubElement(blurred_group, "path")
         path_elem.set("id", elem_id)
@@ -455,17 +470,10 @@ class SvgRenderer:
             if not elem_id:
                 continue
 
-            # Remove sufixo -left/-right para obter id canônico
-            canonical_id = elem_id
-            for suffix in ("-left", "-right"):
-                if elem_id.endswith(suffix):
-                    canonical_id = elem_id[: -len(suffix)]
-                    break
-
-            if canonical_id in heatmap.colors:
-                fill = _rgb_to_hex(heatmap.colors[canonical_id])
-            else:
-                fill = _PLACEHOLDER_FILL
+            # Cor por lado: chave lateralizada (ex.: 'hand_left') senão a canônica
+            canonical_id, side = _canonical_and_side(elem_id)
+            rgb = _color_for(canonical_id, side, heatmap.colors)
+            fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
 
             elem.set("fill", fill)
             # Remove atributo style para evitar conflito com o atributo fill
@@ -504,20 +512,20 @@ class SvgRenderer:
             if not region.geometry:
                 continue
 
-            fill = _PLACEHOLDER_FILL
-            if region.id in heatmap.colors:
-                fill = _rgb_to_hex(heatmap.colors[region.id])
-
             if region.bilateral:
                 for side in _BILATERAL_SIDES:
                     if side not in region.geometry:
                         continue
+                    rgb = _color_for(region.id, side, heatmap.colors)
+                    fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
                     path_elem = ET.SubElement(regions_group, "path")
                     path_elem.set("id", f"{region.id}-{side}")
                     path_elem.set("class", "region")
                     path_elem.set("d", region.geometry[side])
                     path_elem.set("fill", fill)
             else:
+                rgb = _color_for(region.id, None, heatmap.colors)
+                fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
                 path_elem = ET.SubElement(regions_group, "path")
                 path_elem.set("id", region.id)
                 path_elem.set("class", "region")

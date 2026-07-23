@@ -20,6 +20,11 @@ coverage.xml
 venv/
 .venv/
 
+# Segredos locais (NUNCA versionar) - o .env.example fica versionado
+.env
+.env.*
+!.env.example
+
 # Local, nao versionado por decisao do projeto
 .claude/
 CLAUDE.md

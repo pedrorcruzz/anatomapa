@@ -94,24 +94,20 @@ def _append_legend(
     sem sobrepor o corpo. Design: barra vertical com gradiente (topo=máximo,
     base=mínimo), rótulo acima e ticks numéricos à direita.
     """
-    # Largura da faixa da legenda: ~22% do vw original
-    legend_w = vw * 0.22
+    # Faixa reservada à direita para a legenda (viewBox expandido)
+    legend_w = vw * 0.24
     new_total_w = vw + legend_w
-
-    # Atualiza o viewBox do elemento raiz para a largura expandida
     root.set("viewBox", f"{vx} {vy} {new_total_w} {vh}")
 
-    # Posição e dimensões da barra
-    bar_h = vh * 0.55
-    bar_w = legend_w * 0.20
-    # Âncora horizontal: início da faixa extra + margem
-    bar_x = vx + vw + legend_w * 0.18
-    # Centralizado verticalmente
+    # Barra vertical em pílula, alta e centralizada
+    bar_h = vh * 0.52
+    bar_w = legend_w * 0.15
+    bar_x = vx + vw + legend_w * 0.28
     bar_y = vy + (vh - bar_h) / 2.0
 
-    label_size = vh * 0.020
-    tick_font_size = vh * 0.018
-    tick_len = bar_w * 0.55
+    label_size = vh * 0.026
+    tick_font_size = vh * 0.019
+    tick_len = bar_w * 0.45
 
     grad_id = "legend-gradient"
 
@@ -132,17 +128,17 @@ def _append_legend(
     grad.set("y1", "0%")
     grad.set("x2", "0%")
     grad.set("y2", "100%")
-    n_stops = 15
+    n_stops = 24
     for i in range(n_stops + 1):
         # t=0 -> topo (quente/max), t=1 -> base (frio/min)
         t_color = 1.0 - i / n_stops
         color = _rgb_to_hex(colormap.color_at(t_color))
         stop = ET.SubElement(grad, "stop")
-        stop.set("offset", f"{i * 100 // n_stops}%")
+        stop.set("offset", f"{round(i * 100 / n_stops, 1)}%")
         stop.set("stop-color", color)
 
-    # Barra de gradiente com cantos levemente arredondados
-    bar_rx = round(bar_w * 0.20, 2)
+    # Barra em pílula (cantos totalmente arredondados)
+    bar_rx = round(bar_w / 2.0, 2)
     bar = ET.SubElement(root, "rect")
     bar.set("id", "legend-bar")
     bar.set("x", str(round(bar_x, 2)))
@@ -152,7 +148,7 @@ def _append_legend(
     bar.set("fill", f"url(#{grad_id})")
     bar.set("rx", str(bar_rx))
 
-    # Borda fina clara sobre a barra
+    # Borda fina e discreta acompanhando a pílula
     bar_border = ET.SubElement(root, "rect")
     bar_border.set("id", "legend-bar-border")
     bar_border.set("x", str(round(bar_x, 2)))
@@ -160,50 +156,51 @@ def _append_legend(
     bar_border.set("width", str(round(bar_w, 2)))
     bar_border.set("height", str(round(bar_h, 2)))
     bar_border.set("fill", "none")
-    bar_border.set("stroke", "rgba(255,255,255,0.40)")
-    bar_border.set("stroke-width", str(round(vw * 0.0015, 2)))
+    bar_border.set("stroke", "rgba(255,255,255,0.22)")
+    bar_border.set("stroke-width", str(round(vw * 0.0011, 2)))
     bar_border.set("rx", str(bar_rx))
 
-    # Rótulo acima da barra
+    # Rótulo acima da barra, em negrito e alinhado à esquerda dela
     axis_label = "Valor" if lang == "pt" else "Value"
     label_elem = ET.SubElement(root, "text")
     label_elem.set("id", "legend-label")
-    label_elem.set("x", str(round(bar_x + bar_w / 2.0, 2)))
-    label_elem.set("y", str(round(bar_y - label_size * 0.6, 2)))
-    label_elem.set("text-anchor", "middle")
+    label_elem.set("x", str(round(bar_x, 2)))
+    label_elem.set("y", str(round(bar_y - label_size * 0.9, 2)))
+    label_elem.set("text-anchor", "start")
     label_elem.set("font-size", str(round(label_size, 2)))
-    label_elem.set("font-family", "sans-serif")
-    label_elem.set("fill", "#e0e0e0")
+    label_elem.set("font-family", "Helvetica, Arial, sans-serif")
+    label_elem.set("font-weight", "600")
+    label_elem.set("letter-spacing", str(round(label_size * 0.08, 2)))
+    label_elem.set("fill", "#f2f2f2")
     label_elem.text = axis_label
 
-    # Ticks: ~5 valores uniformes entre min e max
+    # Ticks: linha curta + valor, à direita da barra
     ticks = _compute_ticks(heatmap.value_min, heatmap.value_max)
-    tick_x_start = bar_x + bar_w
+    span = heatmap.value_max - heatmap.value_min
+    tick_x_start = bar_x + bar_w + bar_w * 0.4
     tick_x_end = tick_x_start + tick_len
-    text_x = tick_x_end + legend_w * 0.04
+    text_x = tick_x_end + legend_w * 0.06
 
     for tick_val in ticks:
         # Proporção vertical: max no topo (y=bar_y), min na base (y=bar_y+bar_h)
-        t = (tick_val - heatmap.value_min) / (heatmap.value_max - heatmap.value_min) if heatmap.value_max != heatmap.value_min else 0.0
+        t = (tick_val - heatmap.value_min) / span if span else 0.0
         tick_y = bar_y + bar_h * (1.0 - t)
 
-        # Linha do tick
         tick_line = ET.SubElement(root, "line")
         tick_line.set("x1", str(round(tick_x_start, 2)))
         tick_line.set("y1", str(round(tick_y, 2)))
         tick_line.set("x2", str(round(tick_x_end, 2)))
         tick_line.set("y2", str(round(tick_y, 2)))
-        tick_line.set("stroke", "rgba(255,255,255,0.55)")
-        tick_line.set("stroke-width", str(round(vw * 0.0015, 2)))
+        tick_line.set("stroke", "rgba(255,255,255,0.45)")
+        tick_line.set("stroke-width", str(round(vw * 0.0011, 2)))
 
-        # Texto do tick
         tick_text = ET.SubElement(root, "text")
         tick_text.set("x", str(round(text_x, 2)))
-        tick_text.set("y", str(round(tick_y + tick_font_size * 0.35, 2)))
+        tick_text.set("y", str(round(tick_y + tick_font_size * 0.34, 2)))
         tick_text.set("text-anchor", "start")
         tick_text.set("font-size", str(round(tick_font_size, 2)))
-        tick_text.set("font-family", "sans-serif")
-        tick_text.set("fill", "#cccccc")
+        tick_text.set("font-family", "Helvetica, Arial, sans-serif")
+        tick_text.set("fill", "#d6d6d6")
         tick_text.text = _format_tick(tick_val)
 
 

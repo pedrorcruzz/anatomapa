@@ -3,7 +3,7 @@
     {"id": "head",    "label_pt": "Cabeça",     "label_en": "Head",     "aliases": ["cabeca", "cranio", "skull", "face", "rosto", "cara"], "bilateral": false, "parent": null},
     {"id": "trunk",   "label_pt": "Tronco",     "label_en": "Trunk",    "aliases": ["torso", "peito", "peitoral", "chest", "abdomen", "abdomem", "abdome", "barriga", "belly", "tummy", "costas", "dorso", "lombar", "back", "thorax", "torax"], "bilateral": false, "parent": null},
     {"id": "arm",     "label_pt": "Braço",      "label_en": "Arm",      "aliases": ["braco", "umero", "humerus", "upper arm", "biceps", "triceps", "membro superior"], "bilateral": true,  "parent": null},
-    {"id": "forearm", "label_pt": "Antebraço",  "label_en": "Forearm",  "aliases": ["antebraco", "antebrace", "radio", "ulna", "radius"], "bilateral": true,  "parent": null},
+    {"id": "forearm", "label_pt": "Antebraço",  "label_en": "Forearm",  "aliases": ["antebraco", "ante braco", "antebrace", "radio", "ulna", "radius"], "bilateral": true,  "parent": null},
     {"id": "hand",    "label_pt": "Mão",        "label_en": "Hand",     "aliases": ["mao", "palma", "palm", "punho", "wrist"], "bilateral": true,  "parent": null},
     {"id": "finger",  "label_pt": "Dedo",       "label_en": "Finger",   "aliases": ["dedo", "dedos", "fingers", "polegar", "thumb", "indicador", "medio", "anelar", "mindinho", "dedo da mao"], "bilateral": true,  "parent": "hand"},
     {"id": "thigh",   "label_pt": "Coxa",       "label_en": "Thigh",    "aliases": ["coxa", "femur", "femoral", "quadriceps"], "bilateral": true,  "parent": null},

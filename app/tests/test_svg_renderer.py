@@ -20,7 +20,7 @@ _ASSETS_EXIST = (
     and os.path.exists(os.path.join(_ASSETS_DIR, "regions.json"))
 )
 
-_PLACEHOLDER = "#e0e0e0"
+_PLACEHOLDER = "#9aa0a6"  # cor de missing="neutral" (padrão)
 
 
 def _make_model_central() -> AnatomicalModel:

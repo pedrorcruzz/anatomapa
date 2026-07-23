@@ -90,8 +90,13 @@ recognized.
 | `legend`      | `bool` (value bar on the side)                      | `False`      |
 | `background`  | `"dark"`, `"light"`, `"transparent"`                | `"transparent"` |
 | `on_unknown`  | `"error"`, `"skip"`, `"warn"` (unrecognized name)   | `"error"`    |
+| `missing`     | `"neutral"`, `"cold"` (region with no data)         | `"neutral"`  |
 | `region_map`  | `dict` mapping custom names to region ids           | `None`       |
 | `assets_dir`  | alternative assets directory                        | `None`       |
+
+> **`missing`**: a region with no value shows in **neutral grey** (`"neutral"`, default), distinct
+> from cold, so "no data" isn't mistaken for "few cases". Use `"cold"` when your data is complete
+> and you want the whole body colored (thermal-camera look).
 
 Returns a `Figure` object with `.save(path)`, `.to_svg()` and `str(fig)`. In Jupyter, the
 figure renders inline automatically.
@@ -145,16 +150,29 @@ am.validate({"hand": 1, "pedro": 2, "right hand": 3})
 
 ## Regions
 
-10 macro regions. `head` and `trunk` are central; the rest are **bilateral** (a single value
-paints both sides):
+`head` is central; arm, forearm, hand, finger, thigh, leg, foot and toe are **bilateral**
+(one value paints both sides, or use an explicit side). The **trunk is hierarchical**:
 
-| id        | Label       | id        | Label        |
-|-----------|-------------|-----------|--------------|
-| `head`    | Head        | `thigh`   | Thigh        |
-| `trunk`   | Trunk       | `leg`     | Leg          |
-| `arm`     | Arm         | `foot`    | Foot         |
-| `forearm` | Forearm     | `toe`     | Toe          |
-| `hand`    | Hand        | `finger`  | Finger       |
+| id        | Label       | id (bilateral) | Label        |
+|-----------|-------------|----------------|--------------|
+| `head`    | Head        | `arm`          | Arm          |
+| `trunk`   | Trunk *(aggregate)* | `forearm` | Forearm    |
+| ├ `chest`   | Chest *(front)*     | `hand`   | Hand         |
+| ├ `abdomen` | Abdomen *(front)*   | `finger` | Finger       |
+| ├ `pelvis`  | Pelvis *(front/back)* | `thigh`| Thigh        |
+| └ `back`    | Back *(back)*       | `leg`    | Leg          |
+|           |             | `foot`         | Foot         |
+|           |             | `toe`          | Toe          |
+
+**Rollup (inheritance).** Send data at the **coarse** or **fine** level:
+
+```python
+am.heatmap({"trunk": 2602})                  # fills chest+abdomen+pelvis+back
+am.heatmap({"chest": 900, "abdomen": 1200,   # or per part
+            "pelvis": 500})
+```
+A value on `trunk` flows down to its parts; if you provide a specific part, it uses its own
+value. Same logic for `hand`→`finger` and `foot`→`toe`.
 
 ```python
 am.list_regions(lang="en")   # id, label, whether bilateral, and parent region

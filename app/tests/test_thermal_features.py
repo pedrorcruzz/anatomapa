@@ -305,11 +305,12 @@ class TestSmoothMode(unittest.TestCase):
 
     def test_smooth_base_cold_present(self):
         # A base fria (união de todos os paths de região, sem id próprio) deve
-        # estar presente como camada de fundo do degradê.
+        # estar presente como camada de fundo do degradê quando missing="cold"
+        # (comportamento antigo, sem cor de missing neutra).
         from anatomapa.color.registry import get_colormap
         cmap = get_colormap("thermal")
         cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        svg = self._smooth_svg(cmap="thermal")
+        svg = self._smooth_svg(cmap="thermal", missing="cold")
         root = ET.fromstring(svg)
         bases = [
             e
@@ -317,6 +318,18 @@ class TestSmoothMode(unittest.TestCase):
             if _tag(e) in ("rect", "path") and e.get("fill") == cold_hex
         ]
         self.assertGreaterEqual(len(bases), 1, "Base fria ausente no grupo blurred")
+
+    def test_smooth_base_neutral_by_default(self):
+        # Por padrão (missing="neutral"), a base do degradê usa o cinza
+        # discreto de missing, não a cor fria do colormap.
+        svg = self._smooth_svg(cmap="thermal")
+        root = ET.fromstring(svg)
+        bases = [
+            e
+            for e in root.iter()
+            if _tag(e) in ("rect", "path") and e.get("fill") == "#9aa0a6"
+        ]
+        self.assertGreaterEqual(len(bases), 1, "Base neutra ausente no grupo blurred")
 
     def test_smooth_regions_without_value_have_no_own_path(self):
         # Regiões sem valor (ex.: trunk, quando só "head" tem dado) não recebem
@@ -808,7 +821,7 @@ class TestSvgRendererSmoothNoOutline(unittest.TestCase):
             '</g>'
             '</svg>'
         )
-        # Apenas head tem valor; trunk deve receber a cor fria
+        # Apenas head tem valor; trunk deve receber a cor fria quando missing="cold"
         hm = Heatmap(
             colors={"head": (255, 0, 0)},
             scale_name="linear",
@@ -818,8 +831,34 @@ class TestSvgRendererSmoothNoOutline(unittest.TestCase):
         )
         cmap = get_colormap("thermal")
         cold_color = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        svg = _build_smooth_svg(base_svg, hm, cmap, legend=False)
+        svg = _build_smooth_svg(base_svg, hm, cmap, legend=False, missing="cold")
         self.assertIn(cold_color, svg)
+
+    def test_smooth_regions_neutral_color_when_no_value_by_default(self):
+        from anatomapa.render.svg import _build_smooth_svg
+        from anatomapa.domain.heatmap import Heatmap
+        from anatomapa.color.registry import get_colormap
+
+        base_svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900">'
+            '<g id="regions">'
+            '<path id="head" d="M 0 0 Z" />'
+            '<path id="trunk" d="M 1 1 Z" />'
+            '</g>'
+            '</svg>'
+        )
+        # Apenas head tem valor; por padrão (missing="neutral"), trunk deve
+        # receber o cinza discreto, não a cor fria do colormap.
+        hm = Heatmap(
+            colors={"head": (255, 0, 0)},
+            scale_name="linear",
+            value_min=0.0,
+            value_max=100.0,
+            lang="pt",
+        )
+        cmap = get_colormap("thermal")
+        svg = _build_smooth_svg(base_svg, hm, cmap, legend=False)
+        self.assertIn("#9aa0a6", svg)
 
 
 class TestSvgRendererNewParams(unittest.TestCase):

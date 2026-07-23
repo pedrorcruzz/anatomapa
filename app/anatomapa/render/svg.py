@@ -7,7 +7,6 @@ from anatomapa.domain.heatmap import Heatmap
 from anatomapa.domain.model import AnatomicalModel
 from anatomapa.render.base import Figure
 
-_PLACEHOLDER_FILL = "#e0e0e0"
 _BILATERAL_SIDES = ("left", "right")
 
 _SVG_NS = "http://www.w3.org/2000/svg"
@@ -15,6 +14,12 @@ _SVG_NS = "http://www.w3.org/2000/svg"
 # Fundos suportados e a fração de largura reservada à legenda (viewBox expandido)
 _VALID_BACKGROUNDS = ("dark", "light", "transparent")
 _LEGEND_WIDTH_RATIO = 0.24
+
+# Preenchimentos para região sem dado ("missing"): "neutral" sinaliza ausência
+# de dado com um cinza discreto; "cold" reproduz o visual antigo (cor fria do
+# colormap em t=0.0), útil quando o autor quer tratar "sem dado" como "frio".
+_VALID_MISSING = ("neutral", "cold")
+_MISSING_NEUTRAL_HEX = "#9aa0a6"
 
 
 def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
@@ -33,6 +38,26 @@ def _validate_background(background: str) -> None:
         raise ValueError(
             f"Fundo inválido: {background!r}. Use um de {list(_VALID_BACKGROUNDS)}."
         )
+
+
+def _validate_missing(missing: str) -> None:
+    """Valida o parâmetro missing, levantando erro claro se for desconhecido."""
+    if missing not in _VALID_MISSING:
+        raise ValueError(
+            f"Missing inválido: {missing!r}. Use um de {list(_VALID_MISSING)}."
+        )
+
+
+def _missing_fill(missing: str, colormap: ColorMap | None) -> str:
+    """Cor de preenchimento para região (path) sem dado, conforme `missing`.
+
+    "neutral" (padrão) usa um cinza discreto, distinto do frio do colormap,
+    para sinalizar "sem dado" sem confundir com "valor baixo". "cold" usa
+    colormap.color_at(0.0) -- o comportamento antigo, quando disponível.
+    """
+    if missing == "cold" and colormap is not None:
+        return _rgb_to_hex(colormap.color_at(0.0))
+    return _MISSING_NEUTRAL_HEX
 
 
 def _background_fill(background: str) -> str | None:
@@ -274,6 +299,7 @@ def _build_smooth_svg(
     legend: bool,
     lang: str = "pt",
     background: str = "transparent",
+    missing: str = "neutral",
 ) -> str:
     """Constrói o SVG do "modelo preservado": degradê térmico com bordas frias
     e o contorno do corpo sempre nítido por cima.
@@ -293,12 +319,14 @@ def _build_smooth_svg(
        o modelo nunca distorcer com o degradê.
     4. Legenda (opcional).
 
-    Regiões sem valor não recebem path próprio: a base fria por baixo já as
-    mantém frias, sem buracos no degradê.
+    Regiões sem valor não recebem path próprio: a base por baixo (cor de
+    `missing`, cinza neutro por padrão ou fria quando missing="cold") já cobre
+    a área, sem buracos no degradê.
 
     Saída determinística (ordem estável de ids e atributos fixos).
     """
     _validate_background(background)
+    _validate_missing(missing)
     ET.register_namespace("", _SVG_NS)
     base_root = ET.fromstring(base_svg)
 
@@ -328,6 +356,7 @@ def _build_smooth_svg(
 
     outline_d = _extract_body_outline_d(base_svg)
     cold_hex = _rgb_to_hex(colormap.color_at(0.0))
+    missing_hex = _missing_fill(missing, colormap)
 
     # Stroke que fecha os vãos entre os sub-paths na silhueta unida (~2% do vw)
     seam_w = str(round(vw * 0.020, 2))
@@ -390,14 +419,14 @@ def _build_smooth_svg(
     masked_group = ET.SubElement(root, "g")
     masked_group.set("mask", "url(#body-mask)")
 
-    # Camada 1: base fria + regiões coloridas por dado, com blur leve.
+    # Camada 1: base (cor de missing) + regiões coloridas por dado, com blur leve.
     blurred_group = ET.SubElement(masked_group, "g")
     blurred_group.set("filter", "url(#thermal-blur)")
 
     body_base = ET.SubElement(blurred_group, "path")
     body_base.set("d", body_union_d)
-    body_base.set("fill", cold_hex)
-    body_base.set("stroke", cold_hex)
+    body_base.set("fill", missing_hex)
+    body_base.set("stroke", missing_hex)
     body_base.set("stroke-width", seam_w)
     body_base.set("stroke-linejoin", "round")
 
@@ -467,7 +496,8 @@ def _format_tick(v: float) -> str:
 class SvgRenderer:
     """Aplica um Heatmap sobre um clone do SVG base.
 
-    Regiões sem valor no heatmap recebem preenchimento neutro placeholder.
+    Regiões sem valor no heatmap recebem preenchimento conforme `missing`
+    ("neutral", cinza discreto, por padrão; ou "cold", cor fria do colormap).
     Saída é determinística: ordem estável de atributos e regiões.
     """
 
@@ -481,6 +511,7 @@ class SvgRenderer:
         legend: bool = False,
         colormap: ColorMap | None = None,
         background: str = "transparent",
+        missing: str = "neutral",
     ) -> Figure:
         """Aplica as cores do heatmap sobre o SVG anatômico.
 
@@ -502,6 +533,10 @@ class SvgRenderer:
             ColorMap usado para gerar stops da legenda e do modo smooth.
         background:
             Fundo da figura: "dark", "light" ou "transparent" (padrão).
+        missing:
+            Preenchimento de região sem dado: "neutral" (padrão, cinza
+            discreto que sinaliza "sem dado") ou "cold" (cor fria do
+            colormap, comportamento antigo).
 
         Returns
         -------
@@ -511,21 +546,26 @@ class SvgRenderer:
         Raises
         ------
         ValueError
-            Se background não for "dark", "light" ou "transparent".
+            Se background não for "dark", "light" ou "transparent", ou se
+            missing não for "neutral" ou "cold".
         """
         _validate_background(background)
+        _validate_missing(missing)
 
         if smooth and base_svg is not None and colormap is not None:
             svg_str = _build_smooth_svg(
-                base_svg, heatmap, colormap, legend, lang=lang, background=background
+                base_svg, heatmap, colormap, legend,
+                lang=lang, background=background, missing=missing,
             )
         elif base_svg is not None:
             svg_str = self._render_onto_svg(
-                base_svg, heatmap, model, legend, colormap, lang=lang, background=background
+                base_svg, heatmap, model, legend, colormap,
+                lang=lang, background=background, missing=missing,
             )
         else:
             svg_str = self._render_from_model(
-                heatmap, model, lang, legend, colormap, background=background
+                heatmap, model, lang, legend, colormap,
+                background=background, missing=missing,
             )
 
         return Figure(svg_str)
@@ -539,8 +579,11 @@ class SvgRenderer:
         colormap: ColorMap | None = None,
         lang: str = "pt",
         background: str = "transparent",
+        missing: str = "neutral",
     ) -> str:
         """Clona a árvore SVG e aplica as cores de preenchimento do heatmap."""
+        _validate_background(background)
+        _validate_missing(missing)
         ET.register_namespace("", _SVG_NS)
         root = ET.fromstring(base_svg)
 
@@ -577,7 +620,7 @@ class SvgRenderer:
             # Cor por lado: chave lateralizada (ex.: 'hand_left') senão a canônica
             canonical_id, side = _canonical_and_side(elem_id)
             rgb = _color_for(canonical_id, side, heatmap.colors)
-            fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
+            fill = _rgb_to_hex(rgb) if rgb is not None else _missing_fill(missing, colormap)
 
             elem.set("fill", fill)
             # Remove atributo style para evitar conflito com o atributo fill
@@ -597,8 +640,11 @@ class SvgRenderer:
         legend: bool = False,
         colormap: ColorMap | None = None,
         background: str = "transparent",
+        missing: str = "neutral",
     ) -> str:
         """Constrói o SVG do zero a partir da geometria do modelo quando não há SVG base."""
+        _validate_background(background)
+        _validate_missing(missing)
         ET.register_namespace("", _SVG_NS)
         vx, vy, vw, vh = 0.0, 0.0, 400.0, 900.0
         legend_effective = legend and colormap is not None
@@ -627,7 +673,7 @@ class SvgRenderer:
                     if side not in region.geometry:
                         continue
                     rgb = _color_for(region.id, side, heatmap.colors)
-                    fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
+                    fill = _rgb_to_hex(rgb) if rgb is not None else _missing_fill(missing, colormap)
                     path_elem = ET.SubElement(regions_group, "path")
                     path_elem.set("id", f"{region.id}-{side}")
                     path_elem.set("class", "region")
@@ -635,7 +681,7 @@ class SvgRenderer:
                     path_elem.set("fill", fill)
             else:
                 rgb = _color_for(region.id, None, heatmap.colors)
-                fill = _rgb_to_hex(rgb) if rgb is not None else _PLACEHOLDER_FILL
+                fill = _rgb_to_hex(rgb) if rgb is not None else _missing_fill(missing, colormap)
                 path_elem = ET.SubElement(regions_group, "path")
                 path_elem.set("id", region.id)
                 path_elem.set("class", "region")

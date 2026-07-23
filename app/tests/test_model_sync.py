@@ -58,24 +58,45 @@ def _extract_canonical_ids_from_svg(path: str) -> set[str]:
     return ids
 
 
-def _load_json_ids() -> set[str]:
+def _load_json_regions() -> list[dict]:
     with open(_REGIONS_JSON, encoding="utf-8") as fh:
         data = json.load(fh)
-    return {item["id"] for item in data["regions"]}
+    return data["regions"]
+
+
+def _load_json_ids() -> set[str]:
+    return {item["id"] for item in _load_json_regions()}
+
+
+def _view_of(svg_key: str) -> str:
+    return "anterior" if "anterior" in svg_key else "posterior"
+
+
+def _json_ids_for_view(view: str) -> set[str]:
+    """Ids canônicos cuja lista `views` inclui a vista informada.
+
+    Regiões agregadoras (ex.: "trunk", com `views: []`) ficam de fora: não
+    têm path próprio em SVG nenhum, só existem para guiar o rollup.
+    """
+    return {r["id"] for r in _load_json_regions() if view in r.get("views", [])}
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets não encontrados -- pulando testes de sincronia")
 class TestModelSync(unittest.TestCase):
     def _assert_svg_ids_match_json(self, svg_key: str) -> None:
+        """Sincronia POR VISTA: os ids canônicos do SVG devem ser exatamente os
+        ids de regions.json cuja `views` inclui a vista deste SVG. Regiões com
+        `views` vazio (agregadores como "trunk") não entram na comparação."""
         path = _SVG_FILES[svg_key]
         svg_ids = _extract_canonical_ids_from_svg(path)
-        json_ids = _load_json_ids()
+        view = _view_of(svg_key)
+        json_ids = _json_ids_for_view(view)
         self.assertEqual(
             svg_ids,
             json_ids,
-            f"SVG {svg_key} diverge do regions.json.\n"
+            f"SVG {svg_key} (vista {view!r}) diverge do regions.json.\n"
             f"Apenas no SVG: {svg_ids - json_ids}\n"
-            f"Apenas no JSON: {json_ids - svg_ids}",
+            f"Apenas no JSON (para esta vista): {json_ids - svg_ids}",
         )
 
     def test_male_anterior_svg_ids_match_json(self):
@@ -103,9 +124,13 @@ class TestModelSync(unittest.TestCase):
             )
 
     def _assert_bilateral_have_both_sides(self, svg_key: str) -> None:
-        with open(_REGIONS_JSON, encoding="utf-8") as fh:
-            data = json.load(fh)
-        bilateral_ids = {item["id"] for item in data["regions"] if item.get("bilateral")}
+        """Só considera regiões bilaterais cuja `views` inclui a vista deste SVG."""
+        view = _view_of(svg_key)
+        bilateral_ids = {
+            item["id"]
+            for item in _load_json_regions()
+            if item.get("bilateral") and view in item.get("views", [])
+        }
         tree = ET.parse(_SVG_FILES[svg_key])
         root = tree.getroot()
 
@@ -190,6 +215,20 @@ class TestModelSync(unittest.TestCase):
 
     def test_silhouette_present_female_posterior(self):
         self._assert_silhouette_present("female_posterior")
+
+    def test_aggregator_regions_have_no_path_in_any_svg(self):
+        """Regiões com `views: []` (ex.: "trunk") são só agregadoras: não têm
+        path próprio em SVG nenhum, apenas guiam o rollup de valores."""
+        aggregator_ids = {
+            item["id"] for item in _load_json_regions() if not item.get("views")
+        }
+        self.assertTrue(aggregator_ids, "Nenhuma região agregadora encontrada no regions.json")
+        for svg_key, path in _SVG_FILES.items():
+            svg_ids = _extract_canonical_ids_from_svg(path)
+            for aid in aggregator_ids:
+                self.assertNotIn(
+                    aid, svg_ids, f"Região agregadora {aid!r} tem path no SVG {svg_key}"
+                )
 
 
 if __name__ == "__main__":

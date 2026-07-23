@@ -89,8 +89,13 @@ reconhece o nome.
 | `legend`      | `bool` (barra de valores ao lado)                   | `False`      |
 | `background`  | `"dark"`, `"light"`, `"transparent"`                | `"transparent"` |
 | `on_unknown`  | `"error"`, `"skip"`, `"warn"` (nome não reconhecido)| `"error"`    |
+| `missing`     | `"neutral"`, `"cold"` (região sem dado)             | `"neutral"`  |
 | `region_map`  | `dict` de-para de nomes customizados                | `None`       |
 | `assets_dir`  | caminho alternativo dos assets                      | `None`       |
+
+> **`missing`**: região sem valor aparece em **cinza neutro** (`"neutral"`, padrão), distinta do
+> frio, para não confundir "sem dado" com "poucos casos". Use `"cold"` se seu dado é completo e
+> você quer o corpo todo colorido (visual câmera térmica).
 
 Retorna um objeto `Figure` com `.save(caminho)`, `.to_svg()` e `str(fig)`. No Jupyter, a
 figura aparece inline automaticamente.
@@ -144,16 +149,29 @@ am.validate({"mao": 1, "pedro": 2, "mão direita": 3})
 
 ## Regiões
 
-São 10 regiões macro. `head` e `trunk` são centrais; as demais são **bilaterais** (um único
-valor pinta os dois lados):
+`head` é central; braço, antebraço, mão, dedo, coxa, perna, pé e dedo do pé são **bilaterais**
+(um valor pinta os dois lados, ou use lado explícito). O **tronco é hierárquico**:
 
-| id        | PT-BR       | id        | PT-BR        |
-|-----------|-------------|-----------|--------------|
-| `head`    | Cabeça      | `thigh`   | Coxa         |
-| `trunk`   | Tronco      | `leg`     | Perna        |
-| `arm`     | Braço       | `foot`    | Pé           |
-| `forearm` | Antebraço   | `toe`     | Dedo do pé   |
-| `hand`    | Mão         | `finger`  | Dedo         |
+| id        | PT-BR       | id (bilateral) | PT-BR        |
+|-----------|-------------|----------------|--------------|
+| `head`    | Cabeça      | `arm`          | Braço        |
+| `trunk`   | Tronco *(agregador)* | `forearm` | Antebraço |
+| ├ `chest`   | Peito *(frente)*    | `hand`   | Mão          |
+| ├ `abdomen` | Abdômen *(frente)*  | `finger` | Dedo         |
+| ├ `pelvis`  | Pelve *(frente/costas)* | `thigh` | Coxa      |
+| └ `back`    | Costas *(costas)*   | `leg`    | Perna        |
+|           |             | `foot`         | Pé           |
+|           |             | `toe`          | Dedo do pé   |
+
+**Herança (rollup).** Você pode mandar o dado no nível **grosso** ou **fino**:
+
+```python
+am.heatmap({"tronco": 2602})                     # preenche peito+abdômen+pelve+costas
+am.heatmap({"peito": 900, "abdômen": 1200,       # ou separado, por parte
+            "pelve": 500})
+```
+Um valor em `tronco` desce automaticamente para suas partes; se você informar uma parte
+específica, ela usa o próprio valor. Mesma lógica vale para `mão`→`dedo` e `pé`→`dedo do pé`.
 
 ```python
 am.list_regions()          # lista id, rótulo, se é bilateral e a região-pai

@@ -30,4 +30,5 @@ venv/
 CLAUDE.md
 docs/
 template/
-app/tools/
+app/tools/*
+!app/tools/coverage_check.py

@@ -48,3 +48,12 @@ jobs:
           else
             echo "Pasta de testes ainda nao criada, pulando."
           fi
+
+      - name: Cobertura mínima 90% (stdlib trace, zero-dep)
+        working-directory: app
+        run: |
+          if [ -d tests ] && [ -f tools/coverage_check.py ]; then
+            python tools/coverage_check.py --min 90
+          else
+            echo "Sem testes ou ferramenta de cobertura, pulando."
+          fi

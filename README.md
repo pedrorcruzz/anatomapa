@@ -88,6 +88,7 @@ reconhece o nome.
 | `smooth`      | `bool` (degradê térmico contínuo)                   | `False`      |
 | `legend`      | `bool` (barra de valores ao lado)                   | `False`      |
 | `background`  | `"dark"`, `"light"`, `"transparent"`                | `"transparent"` |
+| `on_unknown`  | `"error"`, `"skip"`, `"warn"` (nome não reconhecido)| `"error"`    |
 | `region_map`  | `dict` de-para de nomes customizados                | `None`       |
 | `assets_dir`  | caminho alternativo dos assets                      | `None`       |
 
@@ -96,28 +97,49 @@ figura aparece inline automaticamente.
 
 ## Entrada de dados
 
-Além do `dict`, há leitores para os formatos mais comuns. Os leitores de texto retornam uma
-lista de pares `(região, valor)`; envolva com `dict(...)` ao passar para `heatmap`:
+Além do `dict`, há leitores para os formatos mais comuns. O `heatmap()` aceita tanto um
+`dict` quanto a saída dos leitores direto (não precisa converter):
 
 ```python
 # CSV (você declara as colunas, nada é adivinhado)
-dados = dict(am.from_csv("lesoes.csv", region_col="regiao", value_col="total"))
+dados = am.from_csv("lesoes.csv", region_col="regiao", value_col="total")
 fig = am.heatmap(dados, cmap="thermal", lang="pt")
 
 # JSON  (objeto {"mão": 10} ou lista [{"region": "...", "value": ...}])
-dados = dict(am.from_json("lesoes.json"))
+fig = am.heatmap(am.from_json("lesoes.json"))
 
 # Registros (dicts, namedtuples, dataclasses, DataFrame do pandas via duck typing)
-dados = dict(am.from_records(registros, region_col="regiao", value_col="total"))
+fig = am.heatmap(am.from_records(registros, region_col="regiao", value_col="total"))
 
-# Excel .xlsx (já retorna dict; sem dependência externa)
+# Excel .xlsx (sem dependência externa)
 dados = am.from_xlsx("lesoes.xlsx", region_col="D", value_col="E", header=True)
 ```
 
-Nomes fora do padrão? Passe um de-para com `region_map`:
+## Nomes de região
+
+O resolvedor é tolerante: aceita **PT ou EN**, maiúsc/minúsc, **acentos**, **plurais** e
+**sinônimos** ("MÃO", "mao", "hand", "mãos", "punho" → `hand`). Nomes desconhecidos **não são
+chutados**: por padrão a lib **erra e sugere** o mais parecido (controle com `on_unknown`).
+
+**Lateralidade (esquerda/direita).** As regiões bilaterais aceitam lado: escreva "mão direita"
+ou "right hand" e só a mão direita acende; sem lado, pinta os dois:
 
 ```python
-fig = am.heatmap(dados, region_map={"Membro Sup Dir": "arm"})
+am.heatmap({"mão direita": 500, "mão esquerda": 20, "perna direita": 80})
+```
+
+**Seus próprios nomes.** Use `region_map` (seu rótulo → id da região, aceita ids lateralizados):
+
+```python
+am.heatmap(dados, region_map={"Membro Sup Dir": "arm", "right_hand": "hand_right"})
+```
+
+**Conferir antes de gerar (dry-run).** `validate()` mostra o que resolve e o que não, sem renderizar:
+
+```python
+am.validate({"mao": 1, "pedro": 2, "mão direita": 3})
+# {'resolved': {'mao': 'hand', 'mão direita': 'hand_right'},
+#  'unresolved': {'pedro': {'reason': 'região desconhecida', 'suggestions': ['dedo', ...]}}}
 ```
 
 ## Regiões

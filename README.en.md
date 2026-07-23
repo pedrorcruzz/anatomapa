@@ -5,8 +5,8 @@
 <h1 align="center">anatomapa</h1>
 
 <p align="center">
-  Turn injury and accident data into heatmaps over the human body.
-  From spreadsheet to publish-ready SVG in a few lines of Python.
+  Turn injury, accident and incidence data by body region into anatomical heatmaps.
+  From spreadsheet to publish-ready SVG in a few lines of Python, with zero dependencies.
 </p>
 
 <p align="center">

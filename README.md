@@ -5,8 +5,9 @@
 <h1 align="center">anatomapa</h1>
 
 <p align="center">
-  Transforme dados de lesões e acidentes em mapas de calor sobre o corpo humano.
-  Da planilha ao SVG pronto pra publicar, em poucas linhas de Python.
+  Transforme dados de lesões, acidentes e incidência por região do corpo em mapas de calor
+  anatômicos. Da planilha ao SVG pronto pra publicar, em poucas linhas de Python e sem
+  nenhuma dependência.
 </p>
 
 <p align="center">

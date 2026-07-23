@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anatomapa"
-version = "1.0.0"
+version = "0.1.0"
 description = "Biblioteca Python para mapas de calor anatômicos da superfície do corpo humano. Zero dependências."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -34,3 +34,8 @@ Repository = "https://github.com/pedrorcruzz/anatomapa"
 [tool.setuptools.packages.find]
 where = ["app"]
 include = ["anatomapa*"]
+
+# Empacota os assets do modelo (SVGs + regions.json + atribuição) dentro do wheel.
+# Sem isto, a lib instalada não encontra o corpo e heatmap() quebra.
+[tool.setuptools.package-data]
+anatomapa = ["assets/*.svg", "assets/*.json", "assets/*.txt"]

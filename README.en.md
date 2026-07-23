@@ -5,8 +5,9 @@
 <h1 align="center">anatomapa</h1>
 
 <p align="center">
-  Turn injury, accident and incidence data by body region into anatomical heatmaps.
-  From spreadsheet to publish-ready SVG in a few lines of Python, with zero dependencies.
+  <strong>Paint the human body with your data.</strong><br/>
+  From a dict or a spreadsheet to a publish-ready anatomical heatmap in SVG,
+  in a few lines of Python and with zero dependencies.
 </p>
 
 <p align="center">
@@ -312,8 +313,8 @@ The SVG model silhouettes derive from a **public-domain (CC0)** source; details 
 ## Credits
 
 - **Pedro Rosa**: developer/creator
-- **Marcelo Reis**: professor
-- **Mozart Melo**: coordinator/advisor
+- **Marcelo Reis**: Professor of the Graduate Program in Environmental Systems Analysis, CESMAC
+- **Mozart Melo**: coordinator/advisor, CESMAC
 - **Centro Universitário CESMAC**: institution
 
 <br>

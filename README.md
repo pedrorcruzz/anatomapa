@@ -5,9 +5,9 @@
 <h1 align="center">anatomapa</h1>
 
 <p align="center">
-  Transforme dados de lesões, acidentes e incidência por região do corpo em mapas de calor
-  anatômicos. Da planilha ao SVG pronto pra publicar, em poucas linhas de Python e sem
-  nenhuma dependência.
+  <strong>Pinte o corpo humano com os seus dados.</strong><br/>
+  De um dicionário ou de uma planilha a um mapa de calor anatômico em SVG, pronto pra publicar,
+  em poucas linhas de Python e com zero dependências.
 </p>
 
 <p align="center">
@@ -311,8 +311,8 @@ As silhuetas dos modelos SVG derivam de fonte em **domínio público (CC0)**; de
 ## Créditos
 
 - **Pedro Rosa**: programador/criador
-- **Marcelo Reis**: professor
-- **Mozart Melo**: coordenador/orientador
+- **Marcelo Reis**: Professor do Programa de Pós-Graduação em Análise de Sistemas Ambientais, CESMAC
+- **Mozart Melo**: coordenador/orientador, CESMAC
 - **Centro Universitário CESMAC**: instituição
 
 <br>

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/icon.svg" width="120" alt="anatomapa" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg" width="120" alt="anatomapa" />
 </p>
 
 <h1 align="center">anatomapa</h1>
@@ -11,9 +11,9 @@
 </p>
 
 <p align="center">
-  <a href="README.md"><img src="https://flagcdn.com/24x18/br.png" alt="PT-BR" /> Português</a>
+  <a href="https://github.com/pedrorcruzz/anatomapa/blob/main/README.md"><img src="https://flagcdn.com/24x18/br.png" alt="PT-BR" /> Português</a>
   &nbsp;·&nbsp;
-  <a href="README.en.md"><img src="https://flagcdn.com/24x18/us.png" alt="EN" /> <strong>English</strong></a>
+  <a href="https://github.com/pedrorcruzz/anatomapa/blob/main/README.en.md"><img src="https://flagcdn.com/24x18/us.png" alt="EN" /> <strong>English</strong></a>
 </p>
 
 <p align="center">
@@ -23,7 +23,7 @@
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/hero.png" alt="Male and female anatomical heatmap with legend" width="720" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png" alt="Male and female anatomical heatmap with legend" width="720" />
 </p>
 
 <br>
@@ -286,29 +286,29 @@ am.list_regions(view="posterior", lang="en")
 ## Gallery
 
 <p align="center">
-  <img src="assets/screenshots/exemplo-maos.png" alt="Hands with high values" width="300" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-maos.png" alt="Hands with high values" width="300" />
   &nbsp;
-  <img src="assets/screenshots/exemplo-perna-peito.png" alt="Legs and chest with high values" width="300" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-perna-peito.png" alt="Legs and chest with high values" width="300" />
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/fundos.png" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/dark-vs-light.png" alt="Dark versus light background comparison" width="640" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/dark-vs-light.png" alt="Dark versus light background comparison" width="640" />
 </p>
 
 <p align="center">
-  <img src="assets/screenshots/corpo-modelo.png" alt="Male and female anatomical model" width="420" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png" alt="Male and female anatomical model" width="420" />
 </p>
 
 ## License and attribution
 
-Released under the **MIT** license. See [LICENSE](LICENSE).
+Released under the **MIT** license. See [LICENSE](https://github.com/pedrorcruzz/anatomapa/blob/main/LICENSE).
 
 The SVG model silhouettes derive from a **public-domain (CC0)** source; details in
-[`app/anatomapa/assets/ATTRIBUTION.txt`](app/anatomapa/assets/ATTRIBUTION.txt).
+[`app/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/app/anatomapa/assets/ATTRIBUTION.txt).
 
 ## Credits
 

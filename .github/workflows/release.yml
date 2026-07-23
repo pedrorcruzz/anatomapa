@@ -61,6 +61,7 @@ jobs:
   build:
     name: Construir o pacote (sdist + wheel)
     needs: release
+    if: needs.release.outputs.prerelease == 'false'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -93,22 +94,3 @@ jobs:
           path: dist/
       - name: Publicar no PyPI (Trusted Publishing, sem token)
         uses: pypa/gh-action-pypi-publish@release/v1
-
-  publish-testpypi:
-    name: Publicar no TestPyPI (tag beta/rc)
-    needs: [release, build]
-    if: needs.release.outputs.prerelease == 'true'
-    runs-on: ubuntu-latest
-    environment: testpypi
-    permissions:
-      id-token: write
-    steps:
-      - name: Baixar artefatos
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist/
-      - name: Publicar no TestPyPI (Trusted Publishing, sem token)
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/

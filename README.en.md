@@ -52,6 +52,16 @@ pip install anatomapa
 
 Requires **Python 3.10+** and no external dependencies.
 
+To generate PNG/JPG/JPEG (raster output), install the optional extra, which brings cairosvg
+and Pillow. Pure SVG needs nothing.
+
+```bash
+pip install "anatomapa[raster]"
+```
+
+The quotes matter: shells like zsh and fish treat the brackets as a file pattern (glob), so
+quote the command to make it work everywhere.
+
 > For development, clone the repository: `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
 ## Quick start

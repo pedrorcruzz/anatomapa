@@ -50,7 +50,6 @@ _renderer = SvgRenderer()
 def heatmap(
     values,
     body: str = "male",
-    scale: str = "linear",
     lang: str = "pt",
     format: str = "svg",
     title: str | None = None,
@@ -73,8 +72,6 @@ def heatmap(
         of the from_csv/from_json/from_records readers.
     body:
         Body type: "male" or "female".
-    scale:
-        Scaling strategy: "linear" or "log".
     lang:
         Language of the region labels drawn on the figure: "pt" or "en".
     format:
@@ -115,7 +112,7 @@ def heatmap(
     ResolutionError
         If a label in values cannot be resolved to a known region id.
     ValueError
-        If body, scale, format, background or missing is unknown.
+        If body, format, background or missing is unknown.
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
@@ -150,7 +147,7 @@ def heatmap(
             canonical_values[region_key] = float(val)
 
     colormap = get_colormap("thermal")
-    scale_obj = get_scale(scale)
+    scale_obj = get_scale("linear")
 
     heat = _build_heatmap(
         values=canonical_values,

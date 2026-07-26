@@ -541,7 +541,7 @@ class TestLegend(unittest.TestCase):
             "finger": 8684, "trunk": 2602, "thigh": 1733, "leg": 1984,
             "foot": 13666, "toe": 6547,
         }
-        svg = str(anatomapa.heatmap(values, legend=True, scale="log"))
+        svg = str(anatomapa.heatmap(values, legend=True))
         self.assertIn("13666", svg)
 
     def test_legend_has_tick_lines(self):

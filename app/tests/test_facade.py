@@ -53,11 +53,6 @@ class TestHeatmapFacade(unittest.TestCase):
         fig = anatomapa.heatmap({"head": 5})
         self.assertEqual(fig._format, "svg")
 
-    def test_scale_log(self):
-        import anatomapa
-        fig = anatomapa.heatmap({"head": 1, "trunk": 100}, scale="log")
-        self.assertIn("<svg", str(fig))
-
     def test_title_embedded(self):
         import anatomapa
         fig = anatomapa.heatmap({"head": 5}, title="Meu Mapa")
@@ -82,11 +77,6 @@ class TestHeatmapFacade(unittest.TestCase):
         import anatomapa
         with self.assertRaises(ValueError):
             anatomapa.heatmap({"head": 1}, format="gif")
-
-    def test_invalid_scale_raises(self):
-        import anatomapa
-        with self.assertRaises(ValueError):
-            anatomapa.heatmap({"head": 1}, scale="nonexistent")
 
     def test_unknown_region_raises_resolution_error(self):
         import anatomapa

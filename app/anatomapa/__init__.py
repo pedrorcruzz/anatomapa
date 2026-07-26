@@ -53,13 +53,9 @@ def heatmap(
     lang: str = "pt",
     format: str = "svg",
     title: str | None = None,
-    smooth: bool = False,
-    legend: bool = False,
     background: str = "transparent",
-    missing: str = "neutral",
     on_unknown: str = "error",
     region_map: dict[str, str] | None = None,
-    assets_dir: str | None = None,
 ) -> Figure:
     """Generate an anatomical heatmap figure.
 
@@ -80,18 +76,9 @@ def heatmap(
         extra (pip install anatomapa[raster]).
     title:
         Optional title embedded in the SVG and in the legend.
-    smooth:
-        If True, applies a continuous thermal gradient with feGaussianBlur instead
-        of flat colors.
-    legend:
-        If True, inserts a color bar with intensity labels (minimum and maximum).
     background:
         Figure background: "dark", "light" or "transparent" (default, no background
         rectangle). Legend text colors adapt to the chosen background.
-    missing:
-        Fill for regions without data: "neutral" (default, a discreet grey that
-        signals "no data", distinct from a low value) or "cold" (cold color of the
-        colormap at t=0.0).
     on_unknown:
         Policy for unrecognised labels: "error" (default, raises ResolutionError
         listing them all), "skip" (silently ignores) or "warn" (ignores with a
@@ -99,8 +86,6 @@ def heatmap(
     region_map:
         User mapping: custom label -> region id. Accepts canonical ids ("hand")
         and lateralised ids ("hand_left", "hand_right").
-    assets_dir:
-        Overrides the assets directory path (SVG files + regions.json).
 
     Returns
     -------
@@ -112,7 +97,7 @@ def heatmap(
     ResolutionError
         If a label in values cannot be resolved to a known region id.
     ValueError
-        If body, format, background or missing is unknown.
+        If body, format or background is unknown.
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
@@ -126,7 +111,7 @@ def heatmap(
         )
 
     values = _as_dict(values)
-    model = _loader.load(_VIEW, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
 
     label_list = list(values.keys())
     resolved = resolve(label_list, model, region_map, strict=(on_unknown == "error"))
@@ -158,8 +143,8 @@ def heatmap(
         title=title,
     )
 
-    # Carrega o SVG base para o modo onto-svg (smooth ou não)
-    base = assets_dir or _loader._ASSETS_DIR
+    # Carrega o SVG base para o modo onto-svg
+    base = _loader._ASSETS_DIR
     svg_path = os.path.join(base, f"body_{body}_{_VIEW}.svg")
     with open(svg_path, encoding="utf-8") as fh:
         base_svg = fh.read()
@@ -169,11 +154,11 @@ def heatmap(
         model,
         lang=lang,
         base_svg=base_svg,
-        smooth=smooth,
-        legend=legend,
+        smooth=True,
+        legend=True,
         colormap=colormap,
         background=background,
-        missing=missing,
+        missing="neutral",
     )
     return Figure(figure.to_svg(), format=fmt)
 
@@ -182,7 +167,6 @@ def validate(
     values,
     body: str = "male",
     region_map: dict[str, str] | None = None,
-    assets_dir: str | None = None,
 ) -> dict[str, dict]:
     """Dry-run check of which labels would be recognised, WITHOUT rendering.
 
@@ -198,8 +182,6 @@ def validate(
         Body type used to load the valid regions.
     region_map:
         User mapping (same format as heatmap).
-    assets_dir:
-        Overrides the assets directory.
 
     Returns
     -------
@@ -207,14 +189,13 @@ def validate(
         {"resolved": {label: region_key}, "unresolved": {label: {"reason", "suggestions"}}}.
     """
     values = _as_dict(values)
-    model = _loader.load(_VIEW, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
     return analyze(list(values.keys()), model, region_map)
 
 
 def list_regions(
     lang: str = "pt",
     body: str = "male",
-    assets_dir: str | None = None,
 ) -> list[dict[str, str | bool | None]]:
     """List all anatomical regions for the front (anterior) view.
 
@@ -224,15 +205,13 @@ def list_regions(
         Language of the label field: "pt" or "en".
     body:
         Body type: "male" or "female".
-    assets_dir:
-        Overrides the assets directory path.
 
     Returns
     -------
     list[dict]
         Ordered list of dicts with keys: id, label, bilateral, parent.
     """
-    model = _loader.load(_VIEW, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
     result = []
     for region in model.regions():
         label = region.label_pt if lang == "pt" else region.label_en

@@ -210,7 +210,7 @@ class TestRenderPerSide(unittest.TestCase):
         self.assertEqual(fills["hand-left"], fills["hand-right"])
 
     def test_smooth_per_side(self):
-        svg = str(am.heatmap({"mão direita": 100, "mão esquerda": 1}, smooth=True))
+        svg = str(am.heatmap({"mão direita": 100, "mão esquerda": 1}))
         fills = _fills_by_id(svg)
         self.assertNotEqual(fills.get("hand-left"), fills.get("hand-right"))
 

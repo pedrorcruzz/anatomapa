@@ -69,53 +69,38 @@ Pronto: um SVG com mãos, pés e cabeça coloridos por valor. O resto deste manu
 ## Parâmetros de `heatmap()`
 
 ```python
-am.heatmap(values, body="male", scale="linear", lang="pt", format="svg",
-           title=None, smooth=False, legend=False, background="transparent",
-           missing="neutral", on_unknown="error", region_map=None, assets_dir=None)
+am.heatmap(values, body="male", lang="pt", format="svg", title=None,
+           background="transparent", on_unknown="error", region_map=None)
 ```
 
 | Parâmetro    | Valores                                                        | Padrão          | O que faz |
 |--------------|----------------------------------------------------------------|-----------------|-----------|
 | `values`     | `dict {região: valor}` ou pares `(região, valor)`              | obrigatório     | Dados; aceita a saída dos leitores direto |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Corpo masculino ou feminino |
-| `scale`      | `"linear"`, `"log"`                                            | `"linear"`      | Como valores viram intensidade |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Idioma dos rótulos escritos no SVG |
 | `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Formato de saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` |
 | `title`      | `str` ou `None`                                                | `None`          | Título desenhado na figura |
-| `smooth`     | `bool`                                                         | `False`         | Degradê térmico contínuo em vez de cor chapada |
-| `legend`     | `bool`                                                         | `False`         | Barra de valores (mín..máx) ao lado |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Fundo da figura |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | O que fazer com nome não reconhecido |
-| `missing`    | `"neutral"`, `"cold"`                                          | `"neutral"`     | Cor da região sem dado |
 | `region_map` | `dict {seu rótulo: id da região}`                              | `None`          | De-para de nomes seus; tem precedência |
-| `assets_dir` | `str` ou `None`                                                | `None`          | Caminho alternativo dos assets |
 
 Retorna um objeto [`Figure`](#saída-o-objeto-figure). Nome de região desconhecido levanta
 `ResolutionError` (exceção pública da lib). A paleta de cores é sempre a **térmica**
-(azul frio para laranja quente, visual de câmera térmica); não há escolha de paleta.
+(azul frio para laranja quente, visual de câmera térmica); não há escolha de paleta. A escala
+de intensidade é sempre **linear**: a cor cresce proporcional ao valor.
 
-## Escalas (`scale`)
-
-- **`"linear"`** (padrão): a cor cresce proporcional ao valor. Boa pra dados equilibrados.
-- **`"log"`**: comprime valores extremos. Use quando os dados são muito assimétricos (caso
-  típico de frequência de acidentes, em que uma região concentra quase tudo):
-
-```python
-am.heatmap({"pé": 13666, "cabeça": 845}, scale="log")  # a cabeça ainda aparece
-```
-
-## Fundo, legenda e suavização
+## Fundo
 
 - **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão, sem
   fundo). As cores da legenda se adaptam ao fundo escolhido.
-- **`legend=True`**: desenha uma pílula com a barra de valores ao lado do corpo, de mín a máx,
-  com o rótulo no idioma de `lang` ("Valor" ou "Value").
-- **`smooth`**: com `False` (padrão), cada região sai com **cor chapada**, boa pra leitura
-  categórica. Com `True`, a lib gera um **degradê térmico contínuo** sobre o corpo (modelo
-  preservado, rim frio e contorno nítido), com cara de imagem térmica de verdade:
+
+A **legenda** com a barra de valores (mín..máx, rótulo no idioma de `lang`: "Valor" ou
+"Value") e o **degradê térmico contínuo** sobre o corpo (modelo preservado, contorno nítido)
+são comportamento nativo da figura: sempre presentes, sem parâmetro. É a legenda que informa
+os valores do mapa.
 
 ```python
-am.heatmap(dados, smooth=True, legend=True, background="dark")
+am.heatmap(dados, background="dark")
 ```
 
 ## Nomes de região
@@ -180,9 +165,8 @@ am.heatmap({"peito": 900, "abdômen": 1200, "pelve": 500})  # ou por parte
 Um valor no pai desce automaticamente pros filhos; se você informar a parte específica, ela
 usa o próprio valor. Mesma lógica em `mão` para `dedo` e `pé` para `dedo do pé`.
 
-**Região sem dado (`missing`).** Com `"neutral"` (padrão), região sem valor sai em **cinza
-neutro** (#9aa0a6), distinto do frio: "sem dado" não se confunde com "poucos casos". Com
-`"cold"`, sem dado vira cor fria e o corpo inteiro fica colorido (visual câmera térmica).
+**Região sem dado.** Região sem valor sai nativamente em **cinza neutro** (#9aa0a6),
+distinto do frio: "sem dado" não se confunde com "poucos casos". Sem parâmetro.
 
 ## Entrada de dados
 
@@ -222,7 +206,9 @@ ocorrências de cada região e `"sum"` soma os valores. `None` (padrão) espera 
 | célula do Jupyter | renderiza inline automaticamente |
 
 Pra saída **raster** (PNG/JPG/JPEG), instale o extra opcional `pip install anatomapa[raster]`
-(cairosvg/Pillow, importados só sob demanda; o núcleo segue zero dependências e o SVG puro):
+(traz cairosvg e Pillow, importados só sob demanda; o núcleo segue zero dependências e o SVG
+puro nunca precisa de extra). Sem o extra instalado, pedir png/jpg/jpeg levanta `ImportError`
+com a dica de instalação:
 
 ```python
 fig = am.heatmap(dados, format="png")
@@ -244,14 +230,14 @@ dados = {"cabeça": 845, "braço": 1831, "antebraço": 974, "mão": 5153,
 resultado = am.validate(dados)
 assert not resultado["unresolved"]
 
-# 2. Gera o mapa: escala log (dados assimétricos), visual térmico em fundo escuro
-fig = am.heatmap(dados, body="male", scale="log", smooth=True, legend=True, background="dark")
+# 2. Gera o mapa: visual térmico em fundo escuro
+fig = am.heatmap(dados, body="male", background="dark")
 fig.save("mapa.svg")
 ```
 
 ## Utilidades
 
-**`validate(values, body="male", region_map=None, assets_dir=None)`**
+**`validate(values, body="male", region_map=None)`**
 faz o dry-run: não renderiza, só mostra o que resolve e o que não.
 
 ```python
@@ -260,7 +246,7 @@ am.validate({"mao": 1, "pedro": 2, "mão direita": 3})
 #  'unresolved': {'pedro': {'reason': '...', 'suggestions': ['dedo', ...]}}}
 ```
 
-**`list_regions(lang="pt", body="male", assets_dir=None)`** lista as regiões,
+**`list_regions(lang="pt", body="male")`** lista as regiões,
 cada uma como `{"id", "label", "bilateral", "parent"}`:
 
 ```python

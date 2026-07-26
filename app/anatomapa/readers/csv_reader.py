@@ -11,25 +11,25 @@ def from_csv(
     delimiter: str = ",",
     encoding: str = "utf-8",
 ) -> list[tuple[str, float]]:
-    """Parseia um arquivo ou string CSV em pares (rótulo, valor).
+    """Parses a CSV file or string into (label, value) pairs.
 
     Parameters
     ----------
     source:
-        Caminho do arquivo como string ou objeto de texto tipo arquivo.
+        File path as a string, or a text file-like object.
     region_col:
-        Nome da coluna CSV que contém o rótulo da região.
+        Name of the CSV column that contains the region label.
     value_col:
-        Nome da coluna CSV que contém o valor numérico.
+        Name of the CSV column that contains the numeric value.
     delimiter:
-        Delimitador de campo (padrão: vírgula).
+        Field delimiter (default: comma).
     encoding:
-        Codificação quando source é um caminho de arquivo.
+        Encoding used when source is a file path.
 
     Returns
     -------
     list[tuple[str, float]]
-        Lista de pares (rótulo, valor) na ordem das linhas.
+        List of (label, value) pairs in row order.
     """
     if isinstance(source, str) and not source.startswith("\n") and "\n" not in source[:512]:
         # Trata a string como caminho de arquivo

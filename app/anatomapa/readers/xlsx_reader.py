@@ -277,40 +277,40 @@ def from_xlsx(
     header: bool = True,
     aggregate: str | None = None,
 ) -> dict[str, float]:
-    """Parseia um arquivo Excel (.xlsx) e retorna um mapeamento de região para valor.
+    """Parses an Excel (.xlsx) file and returns a mapping of region to value.
 
-    O arquivo .xlsx é lido sem nenhuma dependência externa: apenas zipfile e
-    xml.etree.ElementTree da stdlib são usados.
+    The .xlsx file is read with no external dependencies: only the stdlib's
+    zipfile and xml.etree.ElementTree are used.
 
     Parameters
     ----------
     source:
-        Caminho do arquivo como string, bytes do arquivo ou objeto binário tipo arquivo.
+        File path as a string, file bytes, or a binary file-like object.
     sheet:
-        Nome da aba a ler. None usa a primeira aba do workbook.
+        Name of the sheet to read. None uses the first sheet in the workbook.
     region_col:
-        Coluna da região: índice inteiro base 0, letra de planilha ("D") ou
-        nome do cabeçalho (quando header=True).
+        Region column: zero-based integer index, spreadsheet letter ("D"),
+        or header name (when header=True).
     value_col:
-        Coluna do valor: mesmos formatos de region_col.
+        Value column: same formats as region_col.
     header:
-        True indica que a primeira linha contém cabeçalhos e deve ser pulada
-        ao coletar dados. Também habilita resolução de coluna por nome.
+        True indicates the first row contains headers and should be skipped
+        when collecting data. Also enables resolving columns by name.
     aggregate:
-        None para uma linha por região (o valor da última ocorrência prevalece),
-        "count" para contar ocorrências de cada região,
-        "sum" para somar os valores por região.
+        None for one row per region (the last occurrence's value wins),
+        "count" to count occurrences of each region,
+        "sum" to sum the values per region.
 
     Returns
     -------
     dict[str, float]
-        Mapeamento de rótulo de região para valor numérico, na ordem de aparição.
+        Mapping from region label to numeric value, in order of appearance.
 
     Raises
     ------
     ValueError
-        Se a aba solicitada não existir, a coluna não for encontrada ou um
-        valor não puder ser convertido para número.
+        If the requested sheet does not exist, the column is not found, or a
+        value cannot be converted to a number.
     """
     # Abre o zip: aceita caminho, bytes ou objeto binário
     if isinstance(source, str):

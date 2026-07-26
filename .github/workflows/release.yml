@@ -65,9 +65,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      - name: Definir versão pela tag
+        run: |
+          TAG="${{ needs.release.outputs.tag }}"
+          VERSION="${TAG#v}"
+          # Normaliza pré-lançamentos para PEP 440: -beta.N->bN, -rc.N->rcN, -alpha.N->aN
+          VERSION=$(echo "$VERSION" | sed -E 's/-beta\.?/b/; s/-rc\.?/rc/; s/-alpha\.?/a/')
+          echo "Versão derivada da tag: ${VERSION}"
+          sed -i -E "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
+          sed -i -E "s/^__version__ = \".*\"/__version__ = \"${VERSION}\"/" app/anatomapa/__init__.py
+          grep -E '^version|^__version__' pyproject.toml app/anatomapa/__init__.py
       - name: Build
         run: |
           python -m pip install --upgrade build

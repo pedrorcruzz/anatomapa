@@ -172,7 +172,7 @@ class TestFacadeOnUnknown(unittest.TestCase):
 class TestFacadeExtras(unittest.TestCase):
     def test_accepts_pairs(self):
         pares = am.from_dict({"mao": 10, "pe": 20})
-        fig = am.heatmap(pares, cmap="thermal")
+        fig = am.heatmap(pares)
         self.assertIn("<svg", str(fig))
 
     def test_accepts_records_output(self):
@@ -210,7 +210,7 @@ class TestRenderPerSide(unittest.TestCase):
         self.assertEqual(fills["hand-left"], fills["hand-right"])
 
     def test_smooth_per_side(self):
-        svg = str(am.heatmap({"mão direita": 100, "mão esquerda": 1}, smooth=True, cmap="thermal"))
+        svg = str(am.heatmap({"mão direita": 100, "mão esquerda": 1}, smooth=True))
         fills = _fills_by_id(svg)
         self.assertNotEqual(fills.get("hand-left"), fills.get("hand-right"))
 

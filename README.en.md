@@ -33,14 +33,14 @@
 
 **anatomapa** is a Python library that generates **anatomical heatmaps** of the external
 human body surface. You feed it quantitative data per region (frequency, intensity or event
-density) and it returns an SVG with the body colored, in anterior or posterior view, male or
+density) and it returns the body colored, always in the front (anterior) view, male or
 female, with color proportional to each region's value.
 
 It fits any field that records the body region as a variable: venomous animal accidents
 (scorpions, snakes, spiders), occupational trauma, sports injuries, forensics, burns and
 dermatology.
 
-- **Zero dependencies:** Python stdlib only. No matplotlib, pandas, numpy or pillow.
+- **Zero dependencies:** Python stdlib only at the core; PNG/JPG is an optional extra.
 - **Deterministic:** the same input always produces the exact same SVG.
 - **Bilingual:** understands region names in Portuguese and English and writes labels in either.
 
@@ -52,8 +52,7 @@ pip install anatomapa
 
 Requires **Python 3.10+** and no external dependencies.
 
-> For development, clone the repository:
-> `git clone https://github.com/pedrorcruzz/anatomapa.git`
+> For development, clone the repository: `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
 ## Quick start
 
@@ -64,25 +63,23 @@ fig = am.heatmap({"HAND": 5153, "FOOT": 13666, "head": 845})
 fig.save("map.svg")
 ```
 
-Done: an SVG with hands, feet and head colored by value. Everything else is optional, and
-that is what the rest of this manual covers.
+Done: an SVG with hands, feet and head colored by value. The rest of this manual is optional.
 
 ## `heatmap()` parameters
 
 ```python
-am.heatmap(values, view="anterior", body="male", cmap="reds", scale="linear", lang="pt",
+am.heatmap(values, body="male", scale="linear", lang="pt", format="svg",
            title=None, smooth=False, legend=False, background="transparent",
-           on_unknown="error", missing="neutral", region_map=None, assets_dir=None)
+           missing="neutral", on_unknown="error", region_map=None, assets_dir=None)
 ```
 
 | Parameter    | Values                                                         | Default         | What it does |
 |--------------|----------------------------------------------------------------|-----------------|--------------|
 | `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; accepts reader output directly |
-| `view`       | `"anterior"`, `"posterior"`                                    | `"anterior"`    | Body view (front or back) |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
-| `cmap`       | `"reds"`, `"heat"`, `"viridis"`, `"blues"`, `"greens"`, `"thermal"` | `"reds"`   | Color palette |
 | `scale`      | `"linear"`, `"log"`                                            | `"linear"`      | How values become intensity |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output format; png/jpg/jpeg require `pip install anatomapa[raster]` |
 | `title`      | `str` or `None`                                                | `None`          | Title drawn on the figure |
 | `smooth`     | `bool`                                                         | `False`         | Continuous thermal gradient instead of flat colors |
 | `legend`     | `bool`                                                         | `False`         | Value bar (min..max) on the side |
@@ -93,18 +90,8 @@ am.heatmap(values, view="anterior", body="male", cmap="reds", scale="linear", la
 | `assets_dir` | `str` or `None`                                                | `None`          | Alternative assets directory |
 
 Returns a [`Figure`](#output-the-figure-object) object. An unknown region name raises
-`ResolutionError` (the library's public exception).
-
-## Palettes (`cmap`)
-
-| Palette   | Look | When to use |
-|-----------|------|-------------|
-| `reds`    | light to red (default) | sober reports, print |
-| `heat`    | yellow to red | classic "hot zone" highlighting |
-| `viridis` | purple to yellow | perceptually uniform, colorblind friendly |
-| `blues`   | light to blue | "cold" data (humidity, exposure) |
-| `greens`  | light to green | positive indicators |
-| `thermal` | cold blue to hot orange, orange top | thermal-camera look; pairs well with `background="dark"` |
+`ResolutionError` (the library's public exception). The color palette is always the
+**thermal** one (cold blue to hot orange, thermal-camera look); there is no palette choice.
 
 ## Scales (`scale`)
 
@@ -114,17 +101,6 @@ Returns a [`Figure`](#output-the-figure-object) object. An unknown region name r
 
 ```python
 am.heatmap({"foot": 13666, "head": 845}, scale="log")  # the head still shows up
-```
-
-## Views and bodies
-
-`view` accepts `"anterior"` (front) and `"posterior"` (back). There is no `"both"`: to get
-both views, call `heatmap()` twice.
-
-```python
-front = am.heatmap(data, view="anterior", body="female")
-back = am.heatmap(data, view="posterior", body="female")
-front.save("front.svg"); back.save("back.svg")
 ```
 
 ## Background, legend and smoothing
@@ -138,7 +114,7 @@ front.save("front.svg"); back.save("back.svg")
   over the body (model preserved, cold rim, crisp outline), looking like a real thermal image:
 
 ```python
-am.heatmap(data, cmap="thermal", smooth=True, legend=True, background="dark")
+am.heatmap(data, smooth=True, legend=True, background="dark")
 ```
 
 ## Region names
@@ -205,9 +181,8 @@ A value on the parent flows down to its children automatically; if you provide a
 part, it uses its own value. Same logic for `hand` to `finger` and `foot` to `toe`.
 
 **Regions with no data (`missing`).** With `"neutral"` (default), a region without a value
-shows in **neutral grey** (#9aa0a6), distinct from cold: "no data" is never mistaken for
-"few cases". With `"cold"`, no data becomes the cold color and the whole body gets colored
-(thermal-camera look).
+shows in **neutral grey** (#9aa0a6), distinct from cold: "no data" never reads as "few cases".
+With `"cold"`, no data becomes the cold color and the whole body gets colored (thermal look).
 
 ## Data input
 
@@ -239,10 +214,20 @@ region's occurrences and `"sum"` sums the values. `None` (default) expects one r
 
 | Usage            | Result |
 |------------------|--------|
-| `fig.save("map.svg")` | writes the SVG file |
+| `fig.save("map.svg")` | writes the file; infers the format from the extension (`.svg`, `.png`, `.jpg`), uses the heatmap's `format`, or accepts `fig.save(path, format="png")` |
 | `fig.to_svg()`   | returns the SVG as a `str` |
-| `str(fig)`       | same, raw SVG (handy in templates) |
+| `fig.to_png()`   | returns the PNG as `bytes` (requires `anatomapa[raster]`) |
+| `fig.to_jpeg()`  | returns the JPEG as `bytes` (requires `anatomapa[raster]`) |
+| `str(fig)`       | same as `to_svg()`, raw SVG (handy in templates) |
 | Jupyter cell     | renders inline automatically |
+
+For **raster** output (PNG/JPG/JPEG), install the optional extra `pip install anatomapa[raster]`
+(cairosvg/Pillow, imported only on demand; the core stays zero-dep and the SVG stays pure):
+
+```python
+fig = am.heatmap(data, format="png")
+fig.save("map.png")
+```
 
 ## Full example
 
@@ -260,14 +245,13 @@ result = am.validate(data)
 assert not result["unresolved"]
 
 # 2. Render the map: log scale (skewed data), thermal look on a dark background
-fig = am.heatmap(data, view="anterior", body="male", cmap="thermal",
-                 scale="log", smooth=True, legend=True, background="dark")
+fig = am.heatmap(data, body="male", scale="log", smooth=True, legend=True, background="dark")
 fig.save("map.svg")
 ```
 
 ## Utilities
 
-**`validate(values, view="anterior", body="male", region_map=None, assets_dir=None)`**
+**`validate(values, body="male", region_map=None, assets_dir=None)`**
 does the dry-run: it does not render, it only shows what resolves and what does not.
 
 ```python
@@ -276,11 +260,11 @@ am.validate({"hand": 1, "pedro": 2, "right hand": 3})
 #  'unresolved': {'pedro': {'reason': '...', 'suggestions': ['finger', ...]}}}
 ```
 
-**`list_regions(view="anterior", lang="pt", body="male", assets_dir=None)`** lists the view's
-regions, each as `{"id", "label", "bilateral", "parent"}`:
+**`list_regions(lang="pt", body="male", assets_dir=None)`** lists the regions,
+each as `{"id", "label", "bilateral", "parent"}`:
 
 ```python
-am.list_regions(view="posterior", lang="en")
+am.list_regions(lang="en")
 # [{'id': 'head', 'label': 'Head', 'bilateral': False, 'parent': None}, ...]
 ```
 
@@ -290,17 +274,8 @@ am.list_regions(view="posterior", lang="en")
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-maos.png?v=2" alt="Hands with high values" width="300" />
   &nbsp;
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-perna-peito.png?v=2" alt="Legs and chest with high values" width="300" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=2" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/dark-vs-light.png?v=2" alt="Dark versus light background comparison" width="640" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=2" alt="Male and female anatomical model" width="420" />
 </p>
 

@@ -4,17 +4,17 @@ from typing import Any
 
 
 def from_dict(data: dict[str, float | int]) -> list[tuple[str, float]]:
-    """Converte um dicionário {rótulo: valor} em lista de pares (rótulo, valor).
+    """Converts a {label: value} dict into a list of (label, value) pairs.
 
     Parameters
     ----------
     data:
-        Mapeamento do rótulo da região para valor numérico.
+        Mapping from region label to numeric value.
 
     Returns
     -------
     list[tuple[str, float]]
-        Lista estável de pares (rótulo, valor) (ordem de inserção do dict).
+        Stable list of (label, value) pairs (dict insertion order).
     """
     return [(str(k), float(v)) for k, v in data.items()]
 
@@ -24,25 +24,25 @@ def from_records(
     region_col: str,
     value_col: str,
 ) -> list[tuple[str, float]]:
-    """Converte uma sequência de objetos tipo registro em pares (rótulo, valor).
+    """Converts a sequence of record-like objects into (label, value) pairs.
 
-    Funciona com qualquer objeto que suporte iteração e acesso por item ou
-    atributo, incluindo dicts, namedtuples, dataclasses e DataFrames do pandas
-    (duck typing, pandas nunca é importado).
+    Works with any object that supports iteration and item or attribute
+    access, including dicts, namedtuples, dataclasses, and pandas
+    DataFrames (duck typing, pandas is never imported).
 
     Parameters
     ----------
     records:
-        Iterável de objetos tipo registro.
+        Iterable of record-like objects.
     region_col:
-        Nome do campo que contém o rótulo da região.
+        Name of the field that contains the region label.
     value_col:
-        Nome do campo que contém o valor numérico.
+        Name of the field that contains the numeric value.
 
     Returns
     -------
     list[tuple[str, float]]
-        Lista de pares (rótulo, valor) na ordem de entrada.
+        List of (label, value) pairs in input order.
     """
     result: list[tuple[str, float]] = []
     for row in records:

@@ -48,15 +48,10 @@ class TestHeatmapFacade(unittest.TestCase):
         self.assertIn("fill", svg)
         self.assertIn("#", svg)
 
-    def test_view_posterior(self):
+    def test_format_default_is_svg(self):
         import anatomapa
-        fig = anatomapa.heatmap({"head": 5, "trunk": 10}, view="posterior")
-        self.assertIn("<svg", str(fig))
-
-    def test_cmap_viridis(self):
-        import anatomapa
-        fig = anatomapa.heatmap({"head": 5}, cmap="viridis")
-        self.assertIn("<svg", str(fig))
+        fig = anatomapa.heatmap({"head": 5})
+        self.assertEqual(fig._format, "svg")
 
     def test_scale_log(self):
         import anatomapa
@@ -83,10 +78,10 @@ class TestHeatmapFacade(unittest.TestCase):
             self.assertIn("label", r)
             self.assertIn("bilateral", r)
 
-    def test_invalid_cmap_raises(self):
+    def test_invalid_format_raises(self):
         import anatomapa
         with self.assertRaises(ValueError):
-            anatomapa.heatmap({"head": 1}, cmap="nonexistent")
+            anatomapa.heatmap({"head": 1}, format="gif")
 
     def test_invalid_scale_raises(self):
         import anatomapa

@@ -85,7 +85,7 @@ am.heatmap(values, body="male", lang="pt", format="svg", title=None,
 
 | Parâmetro    | Valores                                                        | Padrão          | O que faz |
 |--------------|----------------------------------------------------------------|-----------------|-----------|
-| `values`     | `dict {região: valor}` ou pares `(região, valor)`              | obrigatório     | Dados; aceita a saída dos leitores direto |
+| `values`     | `dict {região: valor}` ou pares `(região, valor)`              | obrigatório     | Dados; chave pode ser `Region`; aceita a saída dos leitores |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Corpo masculino ou feminino |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Idioma dos rótulos escritos no SVG |
 | `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Formato de saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` |
@@ -115,26 +115,30 @@ am.heatmap(dados, background="dark")
 
 ## Nomes de região
 
-O resolvedor é tolerante de propósito. Ele aceita:
+**No código: o enum `Region`.** `from anatomapa import Region` traz 30 constantes: os 14 ids
+canônicos mais as versões `_LEFT`/`_RIGHT` das 8 regiões bilaterais. Cada membro é a própria
+string do id (`Region.TRUNK == "trunk"`), então vale onde qualquer rótulo vale: chave de
+`heatmap()` ou valor de `region_map`. O ganho: autocomplete no editor e typo vira erro
+imediato, não falha de resolução em runtime. `list(Region)` ou `list_regions()` listam os ids.
 
-| Você escreve                             | Vira   |
-|------------------------------------------|--------|
-| `"MÃO"`, `"mao"`, `"mãos"`, `"hand"`, `"punho"` | `hand` |
-| `"Dedo da mão"`, `"finger"`, `"dedos"`   | `finger` |
-| `"tronco"`, `"trunk"`, `"torso"`         | `trunk` |
+**Em planilha ou texto livre: strings.** O resolvedor é tolerante de propósito: **PT ou EN**,
+maiúsc/minúsc, com ou sem acento, plural e sinônimos ("MÃO", "mao", "hand" e "punho" viram
+`hand`; "torso" vira `trunk`). Ele não chuta: nome desconhecido levanta `ResolutionError` com
+sugestões do mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
 
-Ou seja: **PT ou EN**, maiúsc/minúsc, com ou sem acento, plural e sinônimos. O que ele **não**
-faz é chutar: nome desconhecido levanta `ResolutionError` listando todos os nomes ruins com
-sugestões do mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` (ignora em
-silêncio) ou `"warn"` (ignora avisando).
-
-**Lateralidade.** Regiões bilaterais (braço, antebraço, mão, dedo, coxa, perna, pé, dedo do pé)
-aceitam lado: `"mão direita"`, `"right hand"` ou o id `"hand_right"` pintam só a mão direita.
-Sem lado, o valor pinta os dois lados.
+As duas formas são equivalentes por dentro:
 
 ```python
-am.heatmap({"mão direita": 500, "mão esquerda": 20, "perna direita": 80})
+import anatomapa as am
+from anatomapa import Region
+
+am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # no código: à prova de typo
+am.heatmap({"mão esquerda": 100, "tronco": 50})        # planilha: nomes humanos
 ```
+
+**Lateralidade.** Regiões bilaterais (braço, antebraço, mão, dedo, coxa, perna, pé, dedo do
+pé) aceitam lado: `"mão direita"`, `"right hand"`, o id `"hand_right"` ou `Region.HAND_RIGHT`
+pintam só a mão direita. Sem lado (`"mão"`, `Region.HAND`), o valor pinta os dois lados.
 
 **Seus próprios nomes.** Se a planilha usa códigos internos, mapeie com `region_map`
 (aceita ids lateralizados e tem precedência sobre o resolvedor):

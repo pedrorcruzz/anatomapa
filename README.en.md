@@ -84,7 +84,7 @@ am.heatmap(values, body="male", lang="pt", format="svg", title=None,
 
 | Parameter    | Values                                                         | Default         | What it does |
 |--------------|----------------------------------------------------------------|-----------------|--------------|
-| `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; accepts reader output directly |
+| `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; keys may be `Region`; accepts reader output directly |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
 | `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output format; png/jpg/jpeg require `pip install anatomapa[raster]` |
@@ -114,26 +114,30 @@ am.heatmap(data, background="dark")
 
 ## Region names
 
-The resolver is forgiving on purpose. It accepts:
+**In code: the `Region` enum.** `from anatomapa import Region` gives 30 constants: the 14
+canonical ids plus `_LEFT`/`_RIGHT` versions of the 8 bilateral regions. Each member is the
+id string itself (`Region.TRUNK == "trunk"`), so it works anywhere a label works: `heatmap()`
+key or `region_map` value. The gain: editor autocomplete and typos becoming immediate errors,
+not runtime resolution failures. `list(Region)` or `list_regions()` list every valid id.
 
-| You write                                   | Becomes |
-|---------------------------------------------|---------|
-| `"HAND"`, `"hand"`, `"hands"`, `"mão"`, `"wrist"` | `hand` |
-| `"Dedo da mão"`, `"finger"`, `"fingers"`    | `finger` |
-| `"trunk"`, `"tronco"`, `"torso"`            | `trunk` |
+**From spreadsheets or free text: strings.** The resolver is forgiving on purpose: **PT or
+EN**, any case, accents or not, plurals and synonyms ("HAND", "hand", "mão", "wrist" become
+`hand`; "torso" becomes `trunk`). It never guesses: an unknown name raises `ResolutionError`
+with suggestions. Control it with `on_unknown`: `"error"` (default), `"skip"` or `"warn"`.
 
-That is: **PT or EN**, any case, with or without accents, plurals and synonyms. What it does
-**not** do is guess: an unknown name raises `ResolutionError` listing every bad name with
-suggestions for the closest match. Control it with `on_unknown`: `"error"` (default),
-`"skip"` (ignore silently) or `"warn"` (ignore with a warning).
-
-**Laterality.** Bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) accept
-a side: `"right hand"`, `"mão direita"` or the id `"hand_right"` paint only the right hand.
-Without a side, the value paints both sides.
+Both forms are equivalent under the hood:
 
 ```python
-am.heatmap({"right hand": 500, "left hand": 20, "right leg": 80})
+import anatomapa as am
+from anatomapa import Region
+
+am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # in code: typo-proof
+am.heatmap({"left hand": 100, "trunk": 50})            # spreadsheet: human names
 ```
+
+**Laterality.** Bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) accept
+a side: `"right hand"`, `"mão direita"`, the id `"hand_right"` or `Region.HAND_RIGHT` paint
+only the right hand. Without a side (`"hand"`, `Region.HAND`), the value paints both sides.
 
 **Your own names.** If your spreadsheet uses internal codes, map them with `region_map`
 (side ids allowed; it takes precedence over the resolver):

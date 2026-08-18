@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import warnings
+from dataclasses import replace
 
 from anatomapa.color.registry import get_colormap, get_scale
 from anatomapa.domain.heatmap import Heatmap
@@ -14,11 +15,11 @@ from anatomapa.readers.native import from_dict, from_records
 from anatomapa.readers.xlsx_reader import from_xlsx
 from anatomapa.regions import Region
 from anatomapa.render.base import Figure
-from anatomapa.render.svg import SvgRenderer
+from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.2.0"
+__version__ = "0.3.1"
 __all__ = [
     "heatmap",
     "validate",
@@ -37,7 +38,13 @@ __all__ = [
 
 _VALID_ON_UNKNOWN = ("error", "skip", "warn")
 _VALID_FORMATS = ("svg", "png", "jpg", "jpeg")
+_VALID_VIEWS = ("anterior", "posterior", "both")
 _VIEW = "anterior"
+
+
+def _views_of(view: str) -> tuple[str, ...]:
+    """Vistas a desenhar: "both" vira as duas, na ordem frente e depois costas."""
+    return ("anterior", "posterior") if view == "both" else (view,)
 
 
 def _as_dict(values) -> dict:
@@ -51,6 +58,7 @@ _renderer = SvgRenderer()
 
 def heatmap(
     values,
+    view: str = "anterior",
     body: str = "male",
     lang: str = "pt",
     format: str = "svg",
@@ -70,6 +78,12 @@ def heatmap(
         as "MÃO" has to be mapped through region_map. An iterable of
         (region, value) pairs is also accepted, such as the output of the
         from_csv/from_json/from_records readers.
+    view:
+        Body view: "anterior" (front, default), "posterior" (back) or "both",
+        which draws the two side by side in a single figure sharing one colour
+        scale and one legend. Trunk regions differ per view: the front exposes
+        chest, abdomen and pelvis; the back exposes back and buttocks. A value
+        on "trunk" fills whichever of them belongs to the view being drawn.
     body:
         Body type: "male" or "female".
     lang:
@@ -101,7 +115,7 @@ def heatmap(
     ResolutionError
         If a label in values cannot be resolved to a known region id.
     ValueError
-        If body, format or background is unknown.
+        If view, body, format or background is unknown.
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
@@ -114,8 +128,14 @@ def heatmap(
             f"format inválido: {format!r}. Use um de {list(_VALID_FORMATS)}."
         )
 
+    if view not in _VALID_VIEWS:
+        raise ValueError(
+            f"view inválida: {view!r}. Use uma de {list(_VALID_VIEWS)}."
+        )
+
     values = _as_dict(values)
-    model = _loader.load(_VIEW, None, body)
+    views = _views_of(view)
+    model = _loader.load(views[0], None, body)
 
     label_list = list(values.keys())
     resolved = resolve(label_list, model, region_map, strict=(on_unknown == "error"))
@@ -137,34 +157,62 @@ def heatmap(
 
     colormap = get_colormap("thermal")
     scale_obj = get_scale("linear")
-
-    heat = _build_heatmap(
-        values=canonical_values,
-        model=model,
-        colormap=colormap,
-        scale=scale_obj,
-        lang=lang,
-        title=title,
-    )
-
-    # Carrega o SVG base para o modo onto-svg
     base = _loader._ASSETS_DIR
-    svg_path = os.path.join(base, f"body_{body}_{_VIEW}.svg")
-    with open(svg_path, encoding="utf-8") as fh:
-        base_svg = fh.read()
 
-    figure = _renderer.render(
-        heat,
-        model,
-        lang=lang,
-        base_svg=base_svg,
-        smooth=True,
+    def _render_one(
+        view_name: str,
+        with_legend: bool,
+        panel_background: str,
+        panel_title: str | None,
+    ):
+        """Renderiza uma vista. Cada vista tem seu modelo, pois as regiões mudam."""
+        view_model = _loader.load(view_name, None, body)
+        heat = _build_heatmap(
+            values=canonical_values,
+            model=view_model,
+            colormap=colormap,
+            scale=scale_obj,
+            lang=lang,
+            title=panel_title,
+        )
+        svg_path = os.path.join(base, f"body_{body}_{view_name}.svg")
+        with open(svg_path, encoding="utf-8") as fh:
+            base_svg = fh.read()
+        figure = _renderer.render(
+            heat,
+            view_model,
+            lang=lang,
+            base_svg=base_svg,
+            smooth=True,
+            legend=with_legend,
+            colormap=colormap,
+            background=panel_background,
+            missing="neutral",
+        )
+        return heat, figure.to_svg()
+
+    if len(views) == 1:
+        _, svg = _render_one(views[0], True, background, title)
+        return Figure(svg, format=fmt)
+
+    # "both": painéis sem legenda, fundo nem título próprios, compostos lado a
+    # lado com uma legenda só; a escala é a mesma porque os valores são os mesmos
+    panels = []
+    shared_heat = None
+    for view_name in views:
+        heat, svg = _render_one(view_name, False, "transparent", None)
+        shared_heat = shared_heat or replace(heat, title=title)
+        panels.append((f"{view_name}-", svg))
+
+    composed = _compose_views(
+        panels,
+        shared_heat,
+        colormap,
         legend=True,
-        colormap=colormap,
+        lang=lang,
         background=background,
-        missing="neutral",
     )
-    return Figure(figure.to_svg(), format=fmt)
+    return Figure(composed, format=fmt)
 
 
 def validate(
@@ -200,8 +248,9 @@ def validate(
 def list_regions(
     lang: str = "pt",
     body: str = "male",
-) -> list[dict[str, str | bool | None]]:
-    """List all anatomical regions for the front (anterior) view.
+    view: str | None = None,
+) -> list[dict]:
+    """List the anatomical regions that can be used as input.
 
     Parameters
     ----------
@@ -209,20 +258,34 @@ def list_regions(
         Language of the label field: "pt" or "en".
     body:
         Body type: "male" or "female".
+    view:
+        Restrict the listing to the regions drawn in one view: "anterior" or
+        "posterior". None (default) lists every region of both views.
 
     Returns
     -------
     list[dict]
-        Ordered list of dicts with keys: id, label, bilateral, parent.
+        Ordered list of dicts with keys: id, label, bilateral, parent, views.
+        The "views" field tells where the region is drawn; an empty tuple marks
+        an aggregating region such as "trunk", which has no drawing of its own
+        but fills its children through the rollup.
     """
-    model = _loader.load(_VIEW, None, body)
+    if view is not None and view not in ("anterior", "posterior"):
+        raise ValueError(
+            "view inválida: use 'anterior', 'posterior' ou None."
+        )
+    model = _loader.load(view or _VIEW, None, body)
     result = []
     for region in model.regions():
+        # Agregadoras (views vazio) valem em qualquer vista via rollup
+        if view is not None and region.views and view not in region.views:
+            continue
         label = region.label_pt if lang == "pt" else region.label_en
         result.append({
             "id": region.id,
             "label": label,
             "bilateral": region.bilateral,
             "parent": region.parent,
+            "views": list(region.views),
         })
     return result

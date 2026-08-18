@@ -46,14 +46,23 @@
       "bilateral": false,
       "parent": "trunk",
       "views": [
-        "anterior",
-        "posterior"
+        "anterior"
       ]
     },
     {
       "id": "back",
       "label_pt": "Costas",
       "label_en": "Back",
+      "bilateral": false,
+      "parent": "trunk",
+      "views": [
+        "posterior"
+      ]
+    },
+    {
+      "id": "buttocks",
+      "label_pt": "Nádegas",
+      "label_en": "Buttocks",
       "bilateral": false,
       "parent": "trunk",
       "views": [

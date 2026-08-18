@@ -78,13 +78,15 @@ Done: an SVG with hands, feet and head colored by value. The rest of this manual
 ## `heatmap()` parameters
 
 ```python
-am.heatmap(values, body="male", lang="pt", format="svg", title=None,
-           background="transparent", on_unknown="error", region_map=None)
+am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
+           title=None, background="transparent", on_unknown="error",
+           region_map=None)
 ```
 
 | Parameter    | Values                                                         | Default         | What it does |
 |--------------|----------------------------------------------------------------|-----------------|--------------|
 | `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; keys may be `Region`; accepts reader output directly |
+| `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Front, back, or the two side by side sharing one legend |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
 | `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output format; png/jpg/jpeg require `pip install anatomapa[raster]` |
@@ -103,14 +105,9 @@ The intensity scale is always **linear**: color grows proportionally to the valu
 - **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) or `"transparent"` (default, no
   background). Legend colors adapt to the chosen background.
 
-The **legend** with the value bar (min..max, label in the `lang` language: "Valor" or
-"Value") and the **continuous thermal gradient** over the body (model preserved, crisp
-outline) are native behavior of the figure: always present, no parameter. The legend is what
-reports the map's values.
-
-```python
-am.heatmap(data, background="dark")
-```
+The **legend** with the value bar (min..max, label following `lang`) and the **continuous
+thermal gradient** over the body are native: always present, no parameter. The legend is what
+reports the map's values. E.g. `am.heatmap(data, background="dark")`.
 
 ## Region names
 
@@ -139,26 +136,32 @@ am.heatmap(data, region_map={"HAND": Region.HAND, "FOREARM": Region.FOREARM})
 
 ## Regions and hierarchy
 
-There are **14 regions**. `trunk` is a **hierarchical aggregator**: it has no geometry of its
+There are **15 regions**. `trunk` is a **hierarchical aggregator**: it has no geometry of its
 own, it only distributes its value to its children. Bilateral regions take one value for both
-sides (or an explicit side).
+sides (or an explicit side). The trunk splits differently per view, as in any external anatomy
+atlas: the front has chest, abdomen and pelvis; the back has back and buttocks.
 
-| id        | Label   | View            | Bilateral | Parent  |
-|-----------|---------|-----------------|-----------|---------|
-| `head`    | Head    | both            | no        |         |
-| `trunk`   | Trunk   | aggregator      | no        |         |
-| `chest`   | Chest   | front only      | no        | `trunk` |
-| `abdomen` | Abdomen | front only      | no        | `trunk` |
-| `pelvis`  | Pelvis  | front and back  | no        | `trunk` |
-| `back`    | Back    | back only       | no        | `trunk` |
-| `arm`     | Arm     | both            | yes       |         |
-| `forearm` | Forearm | both            | yes       |         |
-| `hand`    | Hand    | both            | yes       |         |
-| `finger`  | Finger  | both            | yes       | `hand`  |
-| `thigh`   | Thigh   | both            | yes       |         |
-| `leg`     | Leg     | both            | yes       |         |
-| `foot`    | Foot    | both            | yes       |         |
-| `toe`     | Toe     | both            | yes       | `foot`  |
+| id         | Label    | View            | Bilateral | Parent  |
+|------------|----------|-----------------|-----------|---------|
+| `head`     | Head     | both            | no        |         |
+| `trunk`    | Trunk    | aggregator      | no        |         |
+| `chest`    | Chest    | front only      | no        | `trunk` |
+| `abdomen`  | Abdomen  | front only      | no        | `trunk` |
+| `pelvis`   | Pelvis   | front only      | no        | `trunk` |
+| `back`     | Back     | back only       | no        | `trunk` |
+| `buttocks` | Buttocks | back only       | no        | `trunk` |
+| `arm`     | Arm      | both            | yes       |         |
+| `forearm` | Forearm  | both            | yes       |         |
+| `hand`    | Hand     | both            | yes       |         |
+| `finger`  | Finger   | both            | yes       | `hand`  |
+| `thigh`   | Thigh    | both            | yes       |         |
+| `leg`     | Leg      | both            | yes       |         |
+| `foot`    | Foot     | both            | yes       |         |
+| `toe`     | Toe      | both            | yes       | `foot`  |
+
+**Views.** `view="anterior"` (default) draws the front, `"posterior"` the back and `"both"`
+the two side by side, sharing one colour scale and one legend. `list_regions(view=...)` tells
+what is valid in each. E.g. `am.heatmap({"trunk": 2602}, view="both", background="dark")`.
 
 **Rollup (parent-to-children inheritance).** Send data at whatever level you have:
 
@@ -254,12 +257,12 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 #                           'suggestions': ['hand', 'head', 'hand_left']}}}
 ```
 
-**`list_regions(lang="pt", body="male")`** lists the regions,
-each as `{"id", "label", "bilateral", "parent"}`:
+**`list_regions(lang="pt", body="male", view=None)`** lists the regions, each as
+`{"id", "label", "bilateral", "parent", "views"}`. With `view`, it filters per view:
 
 ```python
-am.list_regions(lang="en")
-# [{'id': 'head', 'label': 'Head', 'bilateral': False, 'parent': None}, ...]
+am.list_regions(lang="en", view="posterior")
+# [{'id': 'head', ..., 'views': ['anterior', 'posterior']}, {'id': 'back', ...}, ...]
 ```
 
 ## Gallery

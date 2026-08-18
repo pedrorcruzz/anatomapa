@@ -28,6 +28,7 @@ class Region(str, Enum):
     ABDOMEN = "abdomen"
     PELVIS = "pelvis"
     BACK = "back"
+    BUTTOCKS = "buttocks"
 
     # Regiões bilaterais: a forma canônica colore os dois lados
     ARM = "arm"

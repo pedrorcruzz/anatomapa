@@ -122,6 +122,61 @@ class TestRasterWithFakes(unittest.TestCase):
                 self.assertTrue(fh.read().startswith(b"PNG:"))
 
 
+class TestRasterVariant(unittest.TestCase):
+    """An SVG figure must rasterise through its filter-free variant.
+
+    Raster converters ignore SVG filters, so rasterising the smooth SVG would
+    paint the body blank.
+    """
+
+    def test_without_a_variant_the_own_svg_is_used(self):
+        from anatomapa.render.base import Figure
+        self.assertEqual(Figure("<svg>a</svg>")._svg_for_raster(), "<svg>a</svg>")
+
+    def test_variant_replaces_the_svg_for_raster_only(self):
+        from anatomapa.render.base import Figure
+        figure = Figure("<svg>smooth</svg>", raster_svg=lambda: "<svg>flat</svg>")
+        self.assertEqual(figure.to_svg(), "<svg>smooth</svg>")
+        self.assertEqual(figure._svg_for_raster(), "<svg>flat</svg>")
+
+    def test_variant_is_built_once_and_reused(self):
+        from anatomapa.render.base import Figure
+        calls = []
+
+        def build():
+            calls.append(1)
+            return "<svg>flat</svg>"
+
+        figure = Figure("<svg>smooth</svg>", raster_svg=build)
+        figure._svg_for_raster()
+        figure._svg_for_raster()
+        self.assertEqual(len(calls), 1)
+
+    @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+    def test_svg_figure_carries_a_filter_free_variant(self):
+        import anatomapa
+        figure = anatomapa.heatmap({"head": 10, "foot": 90})
+        self.assertIn("filter=", figure.to_svg())
+        self.assertNotIn("filter=", figure._svg_for_raster())
+
+    @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+    def test_png_figure_is_already_flat_and_needs_no_variant(self):
+        import anatomapa
+        figure = anatomapa.heatmap({"head": 10, "foot": 90}, format="png")
+        self.assertNotIn("filter=", figure.to_svg())
+        self.assertEqual(figure._svg_for_raster(), figure.to_svg())
+
+    @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+    def test_each_split_figure_gets_its_own_variant(self):
+        import anatomapa
+        front, back = anatomapa.heatmap(
+            {"head": 10, "foot": 90}, view="both", split=True
+        )
+        self.assertNotIn("filter=", front._svg_for_raster())
+        self.assertNotIn("filter=", back._svg_for_raster())
+        self.assertNotEqual(front._svg_for_raster(), back._svg_for_raster())
+
+
 class TestRasterMissingDependency(unittest.TestCase):
     """Without the extra installed, raster formats fail with an install hint."""
 

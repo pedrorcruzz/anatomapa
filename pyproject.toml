@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anatomapa"
-version = "0.3.2"
-description = "Biblioteca Python para mapas de calor anatômicos da superfície do corpo humano. Zero dependências."
+version = "0.3.3"
+description = "Python library for anatomical heatmaps of the human body surface. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
@@ -14,7 +14,7 @@ authors = [
   { name = "Marcelo Reis" },
   { name = "Mozart Melo" },
 ]
-keywords = ["anatomia", "heatmap", "mapa de calor", "svg", "visualizacao", "epidemiologia"]
+keywords = ["anatomy", "heatmap", "body map", "svg", "visualization", "epidemiology", "anatomia", "mapa de calor"]
 classifiers = [
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.10",

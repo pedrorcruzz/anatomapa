@@ -95,7 +95,7 @@ class TestRollupBuild(unittest.TestCase):
         result = build_heatmap(
             {"head": 0.0, "trunk": 100.0}, self.model_posterior, self.cmap, self.scale
         )
-        for rid in ("back", "pelvis"):
+        for rid in ("back", "buttocks"):
             self.assertIn(rid, result.colors, f"{rid} não recebeu cor via rollup")
             self.assertEqual(result.colors[rid], result.colors["trunk"])
 
@@ -274,7 +274,7 @@ class TestTrunkRollupRender(unittest.TestCase):
     def test_trunk_value_colors_posterior_children(self):
         svg = _render_view({"trunk": 50}, "posterior")
         paths = self._paths_by_id(svg)
-        for rid in ("back", "pelvis"):
+        for rid in ("back", "buttocks"):
             self.assertIn(rid, paths)
             self.assertNotEqual(
                 paths[rid].get("fill"), _MISSING_NEUTRAL_HEX,
@@ -293,11 +293,13 @@ class TestTrunkRollupRender(unittest.TestCase):
             and paths_ant[rid].get("fill") != _MISSING_NEUTRAL_HEX
         }
         colored |= {
-            rid for rid in ("back", "pelvis")
+            rid for rid in ("back", "buttocks")
             if paths_post.get(rid) is not None
             and paths_post[rid].get("fill") != _MISSING_NEUTRAL_HEX
         }
-        self.assertEqual(colored, {"chest", "abdomen", "pelvis", "back"})
+        self.assertEqual(
+            colored, {"chest", "abdomen", "pelvis", "back", "buttocks"}
+        )
 
 
 if __name__ == "__main__":

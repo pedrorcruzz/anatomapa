@@ -118,6 +118,7 @@ def load(
             parent=item.get("parent"),
             geometry=geom,
             area=item.get("area"),
+            views=tuple(item.get("views", [])),
         )
         regions.append(region)
 

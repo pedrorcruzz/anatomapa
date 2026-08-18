@@ -89,7 +89,7 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Front, back, or the two side by side sharing one legend |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
-| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output format; png/jpg/jpeg require `pip install anatomapa[raster]` |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output; png/jpg/jpeg need `pip install anatomapa[raster]` and use flat fills |
 | `title`      | `str` or `None`                                                | `None`          | Title drawn on the figure |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Figure background |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | What to do with an unrecognized name |

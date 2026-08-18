@@ -290,6 +290,15 @@ class TestFromXlsxBasic(unittest.TestCase):
         for v in result.values():
             self.assertIsInstance(v, float)
 
+    def test_accepts_a_path_like_source(self):
+        # Os manuais passam um pathlib.Path; a assinatura promete path-like
+        import pathlib
+        with tempfile.TemporaryDirectory() as tmp:
+            path = pathlib.Path(tmp) / "planilha.xlsx"
+            path.write_bytes(self.xlsx_bytes)
+            result = from_xlsx(path)
+        self.assertEqual(result["head"], 10.0)
+
     def test_preserves_order_of_appearance(self):
         result = from_xlsx(self.xlsx_bytes)
         self.assertEqual(list(result.keys()), ["head", "arm", "leg", "trunk"])

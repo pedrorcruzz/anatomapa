@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anatomapa"
-version = "0.3.5"
+version = "0.3.6"
 description = "Python library for anatomical heatmaps of the human body surface. Zero dependencies."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -42,5 +42,7 @@ include = ["anatomapa*"]
 
 # Empacota os assets do modelo (SVGs + regions.json + atribuição) dentro do wheel.
 # Sem isto, a lib instalada não encontra o corpo e heatmap() quebra.
+# O py.typed (PEP 561) é o que faz o type checker enxergar as anotações da lib
+# instalada; sem ele, os overloads de heatmap() são ignorados no projeto de quem usa.
 [tool.setuptools.package-data]
-anatomapa = ["assets/*.svg", "assets/*.json", "assets/*.txt"]
+anatomapa = ["assets/*.svg", "assets/*.json", "assets/*.txt", "py.typed"]

@@ -92,5 +92,42 @@ class TestHeatmapFacade(unittest.TestCase):
         self.assertEqual(str(fig1), str(fig2))
 
 
+@unittest.skipUnless(_ASSETS_EXIST, "Assets not yet created -- skipping facade tests")
+class TestRegionMapAcceptsEnumValues(unittest.TestCase):
+    """Tests for region_map with Region members as values, as the manuals use."""
+
+    def test_heatmap_accepts_enum_values_in_region_map(self):
+        import anatomapa
+        from anatomapa.regions import Region
+        fig = anatomapa.heatmap({"CABEÇA": 10}, region_map={"CABEÇA": Region.HEAD})
+        self.assertIn("head", str(fig))
+
+    def test_validate_accepts_enum_values_in_region_map(self):
+        import anatomapa
+        from anatomapa.regions import Region
+        report = anatomapa.validate({"MÃO": 3}, region_map={"MÃO": Region.HAND})
+        self.assertFalse(report["unresolved"])
+        self.assertEqual(report["resolved"]["MÃO"], "hand")
+
+
+class TestTypedMarker(unittest.TestCase):
+    """Tests for the PEP 561 marker, without which type checkers ignore the lib."""
+
+    def test_py_typed_file_exists(self):
+        import anatomapa
+        package_dir = os.path.dirname(anatomapa.__file__)
+        self.assertTrue(os.path.exists(os.path.join(package_dir, "py.typed")))
+
+    def test_py_typed_is_declared_as_package_data(self):
+        pyproject = os.path.join(
+            os.path.dirname(__file__), "..", "..", "pyproject.toml"
+        )
+        if not os.path.exists(pyproject):
+            self.skipTest("pyproject.toml ausente (instalação sem fontes)")
+        with open(pyproject, encoding="utf-8") as handle:
+            content = handle.read()
+        self.assertIn('"py.typed"', content)
+
+
 if __name__ == "__main__":
     unittest.main()

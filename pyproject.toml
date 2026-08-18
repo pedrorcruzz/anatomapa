@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "anatomapa"
-version = "0.1.0"
+version = "0.1.1"
 description = "Biblioteca Python para mapas de calor anatômicos da superfície do corpo humano. Zero dependências."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -26,6 +26,11 @@ classifiers = [
   "Topic :: Scientific/Engineering :: Visualization",
 ]
 dependencies = []
+
+# Extra opcional para saída raster (png/jpg/jpeg). O núcleo segue zero-dep;
+# estes pacotes só são importados quando um formato raster é solicitado.
+[project.optional-dependencies]
+raster = ["cairosvg>=2.5", "Pillow>=9"]
 
 [project.urls]
 Homepage = "https://github.com/pedrorcruzz/anatomapa"

@@ -1,15 +1,16 @@
-"""Testes para a subdivisão do tronco (chest/abdomen/pelvis/back) e recursos
-relacionados: rollup pai->filhos, parâmetro `missing` e resolução de nomes.
+"""Tests for the trunk subdivision (chest/abdomen/pelvis/back) and related
+features: parent->child rollup, the `missing` parameter and name resolution.
 
-Cobre:
-- Rollup: valor em região agregadora (ex.: "trunk") preenche os filhos sem
-  valor próprio (chest, abdomen, pelvis, back); valor em "hand" preenche "finger".
-- value_min/value_max do Heatmap refletem só os valores reais de entrada.
-- missing="neutral" (padrão) pinta cinza discreto; missing="cold" pinta frio.
-- missing inválido levanta ValueError.
-- Resolução de nomes PT: "peito"->chest, "costas"->back, "abdomen"->abdomen,
-  "pelve"->pelvis, "tronco"->trunk.
-- Render fim a fim: valor em "trunk" colore os filhos nas duas vistas.
+Covers:
+- Rollup: a value on an aggregating region (such as "trunk") fills the children
+  that have no value of their own (chest, abdomen, pelvis, back); a value on
+  "hand" fills "finger".
+- The Heatmap's value_min/value_max reflect only the real input values.
+- missing="neutral" (default) paints a discreet grey; missing="cold" paints cold.
+- An invalid missing raises ValueError.
+- Portuguese name resolution: "peito"->chest, "costas"->back,
+  "abdomen"->abdomen, "pelve"->pelvis, "tronco"->trunk.
+- End-to-end render: a value on "trunk" colours the children in both views.
 """
 
 import os
@@ -32,9 +33,38 @@ def _tag(elem: ET.Element) -> str:
     return elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
 
 
+def _render_view(values: dict, view: str, body: str = "male") -> str:
+    """Render a specific view through the internal core.
+
+    The public facade exposes only the front; the posterior view remains
+    renderable internally and this helper covers that path in the tests.
+    """
+    from anatomapa.color.registry import get_colormap, get_scale
+    from anatomapa.model import loader as _loader
+    from anatomapa.render.svg import SvgRenderer
+    from anatomapa.resolver.resolver import resolve
+    from anatomapa.usecases.build import build_heatmap
+
+    model = _loader.load(view, body=body)
+    resolved = resolve(list(values.keys()), model, None, strict=True)
+    canonical = {resolved[k]: float(v) for k, v in values.items() if k in resolved}
+    heat = build_heatmap(
+        values=canonical, model=model,
+        colormap=get_colormap("thermal"), scale=get_scale("linear"),
+        lang="pt", title=None,
+    )
+    base = os.path.join(_loader._ASSETS_DIR, f"body_{body}_{view}.svg")
+    with open(base, encoding="utf-8") as fh:
+        base_svg = fh.read()
+    return str(SvgRenderer().render(
+        heat, model, lang="pt", base_svg=base_svg, smooth=False, legend=False,
+        colormap=get_colormap("thermal"), background="transparent", missing="neutral",
+    ))
+
+
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de subdivisão")
 class TestRollupBuild(unittest.TestCase):
-    """Testa o rollup pai->filhos em build_heatmap, com o modelo real."""
+    """Tests the parent->child rollup in build_heatmap against the real model."""
 
     def setUp(self):
         from anatomapa.model import loader as _loader
@@ -107,75 +137,17 @@ class TestRollupBuild(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de missing")
 class TestMissingParameterFacade(unittest.TestCase):
-    """Testa o parâmetro `missing` via a facade heatmap(), fim a fim."""
-
-    def _paths_by_id(self, svg: str) -> dict[str, ET.Element]:
-        root = ET.fromstring(svg)
-        return {p.get("id"): p for p in root.iter() if _tag(p) == "path"}
-
-    def test_missing_neutral_is_default(self):
-        import anatomapa
-
-        svg = str(anatomapa.heatmap({"head": 10}, view="anterior"))
-        paths = self._paths_by_id(svg)
-        self.assertEqual(paths["chest"].get("fill"), _MISSING_NEUTRAL_HEX)
-
-    def test_missing_cold_uses_colormap_zero(self):
-        import anatomapa
-        from anatomapa.color.registry import get_colormap
-
-        cmap = get_colormap("thermal")
-        cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        svg = str(anatomapa.heatmap(
-            {"head": 10}, view="anterior", cmap="thermal", missing="cold",
-        ))
-        paths = self._paths_by_id(svg)
-        self.assertEqual(paths["chest"].get("fill"), cold_hex)
-
-    def test_missing_neutral_differs_from_cold(self):
-        import anatomapa
-        from anatomapa.color.registry import get_colormap
-
-        cmap = get_colormap("thermal")
-        cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        self.assertNotEqual(_MISSING_NEUTRAL_HEX, cold_hex)
-
-        svg_neutral = str(anatomapa.heatmap({"head": 10}, view="anterior", cmap="thermal"))
-        svg_cold = str(anatomapa.heatmap(
-            {"head": 10}, view="anterior", cmap="thermal", missing="cold",
-        ))
-        paths_neutral = self._paths_by_id(svg_neutral)
-        paths_cold = self._paths_by_id(svg_cold)
-        self.assertNotEqual(paths_neutral["chest"].get("fill"), paths_cold["chest"].get("fill"))
+    """Tests the `missing` parameter end to end through the heatmap() facade."""
 
     def test_missing_smooth_neutral_by_default(self):
         import anatomapa
 
-        svg = str(anatomapa.heatmap(
-            {"head": 10}, view="anterior", cmap="thermal", smooth=True,
-        ))
+        svg = str(anatomapa.heatmap({"head": 10}))
         self.assertIn(_MISSING_NEUTRAL_HEX, svg)
-
-    def test_missing_smooth_cold_matches_colormap_zero(self):
-        import anatomapa
-        from anatomapa.color.registry import get_colormap
-
-        cmap = get_colormap("thermal")
-        cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        svg = str(anatomapa.heatmap(
-            {"head": 10}, view="anterior", cmap="thermal", smooth=True, missing="cold",
-        ))
-        self.assertIn(cold_hex, svg)
-
-    def test_invalid_missing_raises(self):
-        import anatomapa
-
-        with self.assertRaises(ValueError):
-            anatomapa.heatmap({"head": 10}, missing="lukewarm")
 
 
 class TestMissingParameterRenderer(unittest.TestCase):
-    """Testa o parâmetro `missing` diretamente no SvgRenderer (sem assets)."""
+    """Tests the `missing` parameter directly on SvgRenderer (no assets)."""
 
     def _make_model(self):
         from anatomapa.domain.model import AnatomicalModel
@@ -248,7 +220,7 @@ class TestMissingParameterRenderer(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de resolução")
 class TestSubdivisionNameResolution(unittest.TestCase):
-    """Testa que os novos nomes PT resolvem para os ids corretos."""
+    """Tests that the new Portuguese names resolve to the right ids."""
 
     def setUp(self):
         from anatomapa.model import loader as _loader
@@ -283,7 +255,7 @@ class TestSubdivisionNameResolution(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de render com rollup")
 class TestTrunkRollupRender(unittest.TestCase):
-    """Render fim a fim: valor em "trunk" deve colorir os filhos nas duas vistas."""
+    """End-to-end render: a value on "trunk" must colour the children in both views."""
 
     def _paths_by_id(self, svg: str) -> dict[str, ET.Element]:
         root = ET.fromstring(svg)
@@ -291,7 +263,7 @@ class TestTrunkRollupRender(unittest.TestCase):
 
     def test_trunk_value_colors_anterior_children(self):
         import anatomapa
-        svg = str(anatomapa.heatmap({"trunk": 50}, view="anterior"))
+        svg = str(anatomapa.heatmap({"trunk": 50}))
         paths = self._paths_by_id(svg)
         for rid in ("chest", "abdomen", "pelvis"):
             self.assertIn(rid, paths)
@@ -301,8 +273,7 @@ class TestTrunkRollupRender(unittest.TestCase):
             )
 
     def test_trunk_value_colors_posterior_children(self):
-        import anatomapa
-        svg = str(anatomapa.heatmap({"trunk": 50}, view="posterior"))
+        svg = _render_view({"trunk": 50}, "posterior")
         paths = self._paths_by_id(svg)
         for rid in ("back", "pelvis"):
             self.assertIn(rid, paths)
@@ -313,8 +284,8 @@ class TestTrunkRollupRender(unittest.TestCase):
 
     def test_all_four_trunk_children_get_colored_across_views(self):
         import anatomapa
-        svg_ant = str(anatomapa.heatmap({"trunk": 50}, view="anterior"))
-        svg_post = str(anatomapa.heatmap({"trunk": 50}, view="posterior"))
+        svg_ant = str(anatomapa.heatmap({"trunk": 50}))
+        svg_post = _render_view({"trunk": 50}, "posterior")
         paths_ant = self._paths_by_id(svg_ant)
         paths_post = self._paths_by_id(svg_post)
         colored = {

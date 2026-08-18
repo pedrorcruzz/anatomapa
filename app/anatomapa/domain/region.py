@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 
 @dataclass(frozen=True)
 class Region:
-    """Região anatômica com geometria e metadados."""
+    """Anatomical region with its geometry and metadata."""
 
     id: str
     label_pt: str

@@ -33,14 +33,14 @@
 
 **anatomapa** is a Python library that generates **anatomical heatmaps** of the external
 human body surface. You feed it quantitative data per region (frequency, intensity or event
-density) and it returns an SVG with the body colored, in anterior or posterior view, male or
+density) and it returns the body colored, always in the front (anterior) view, male or
 female, with color proportional to each region's value.
 
 It fits any field that records the body region as a variable: venomous animal accidents
 (scorpions, snakes, spiders), occupational trauma, sports injuries, forensics, burns and
 dermatology.
 
-- **Zero dependencies:** Python stdlib only. No matplotlib, pandas, numpy or pillow.
+- **Zero dependencies:** Python stdlib only at the core; PNG/JPG is an optional extra.
 - **Deterministic:** the same input always produces the exact same SVG.
 - **Bilingual:** understands region names in Portuguese and English and writes labels in either.
 
@@ -52,8 +52,17 @@ pip install anatomapa
 
 Requires **Python 3.10+** and no external dependencies.
 
-> For development, clone the repository:
-> `git clone https://github.com/pedrorcruzz/anatomapa.git`
+To generate PNG/JPG/JPEG (raster output), install the optional extra, which brings cairosvg
+and Pillow. Pure SVG needs nothing.
+
+```bash
+pip install "anatomapa[raster]"
+```
+
+The quotes matter: shells like zsh and fish treat the brackets as a file pattern (glob), so
+quote the command to make it work everywhere.
+
+> For development, clone the repository: `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
 ## Quick start
 
@@ -64,105 +73,71 @@ fig = am.heatmap({"HAND": 5153, "FOOT": 13666, "head": 845})
 fig.save("map.svg")
 ```
 
-Done: an SVG with hands, feet and head colored by value. Everything else is optional, and
-that is what the rest of this manual covers.
+Done: an SVG with hands, feet and head colored by value. The rest of this manual is optional.
 
 ## `heatmap()` parameters
 
 ```python
-am.heatmap(values, view="anterior", body="male", cmap="reds", scale="linear", lang="pt",
-           title=None, smooth=False, legend=False, background="transparent",
-           on_unknown="error", missing="neutral", region_map=None, assets_dir=None)
+am.heatmap(values, body="male", lang="pt", format="svg", title=None,
+           background="transparent", on_unknown="error", region_map=None)
 ```
 
 | Parameter    | Values                                                         | Default         | What it does |
 |--------------|----------------------------------------------------------------|-----------------|--------------|
-| `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; accepts reader output directly |
-| `view`       | `"anterior"`, `"posterior"`                                    | `"anterior"`    | Body view (front or back) |
+| `values`     | `dict {region: value}` or `(region, value)` pairs              | required        | Data; keys may be `Region`; accepts reader output directly |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
-| `cmap`       | `"reds"`, `"heat"`, `"viridis"`, `"blues"`, `"greens"`, `"thermal"` | `"reds"`   | Color palette |
-| `scale`      | `"linear"`, `"log"`                                            | `"linear"`      | How values become intensity |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output format; png/jpg/jpeg require `pip install anatomapa[raster]` |
 | `title`      | `str` or `None`                                                | `None`          | Title drawn on the figure |
-| `smooth`     | `bool`                                                         | `False`         | Continuous thermal gradient instead of flat colors |
-| `legend`     | `bool`                                                         | `False`         | Value bar (min..max) on the side |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Figure background |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | What to do with an unrecognized name |
-| `missing`    | `"neutral"`, `"cold"`                                          | `"neutral"`     | Color for regions with no data |
 | `region_map` | `dict {your label: region id}`                                 | `None`          | Your own name mapping; takes precedence |
-| `assets_dir` | `str` or `None`                                                | `None`          | Alternative assets directory |
 
 Returns a [`Figure`](#output-the-figure-object) object. An unknown region name raises
-`ResolutionError` (the library's public exception).
+`ResolutionError` (the library's public exception). The color palette is always the
+**thermal** one (cold blue to hot orange, thermal-camera look); there is no palette choice.
+The intensity scale is always **linear**: color grows proportionally to the value.
 
-## Palettes (`cmap`)
-
-| Palette   | Look | When to use |
-|-----------|------|-------------|
-| `reds`    | light to red (default) | sober reports, print |
-| `heat`    | yellow to red | classic "hot zone" highlighting |
-| `viridis` | purple to yellow | perceptually uniform, colorblind friendly |
-| `blues`   | light to blue | "cold" data (humidity, exposure) |
-| `greens`  | light to green | positive indicators |
-| `thermal` | cold blue to hot orange, orange top | thermal-camera look; pairs well with `background="dark"` |
-
-## Scales (`scale`)
-
-- **`"linear"`** (default): color grows proportionally to the value. Good for balanced data.
-- **`"log"`**: compresses extreme values. Use it when data is heavily skewed (the typical
-  case for accident frequency, where one region concentrates almost everything):
-
-```python
-am.heatmap({"foot": 13666, "head": 845}, scale="log")  # the head still shows up
-```
-
-## Views and bodies
-
-`view` accepts `"anterior"` (front) and `"posterior"` (back). There is no `"both"`: to get
-both views, call `heatmap()` twice.
-
-```python
-front = am.heatmap(data, view="anterior", body="female")
-back = am.heatmap(data, view="posterior", body="female")
-front.save("front.svg"); back.save("back.svg")
-```
-
-## Background, legend and smoothing
+## Background
 
 - **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) or `"transparent"` (default, no
   background). Legend colors adapt to the chosen background.
-- **`legend=True`**: draws a pill with the value bar next to the body, from min to max, with
-  the label in the `lang` language ("Valor" or "Value").
-- **`smooth`**: with `False` (default), each region gets a **flat color**, good for
-  categorical reading. With `True`, the library renders a **continuous thermal gradient**
-  over the body (model preserved, cold rim, crisp outline), looking like a real thermal image:
+
+The **legend** with the value bar (min..max, label in the `lang` language: "Valor" or
+"Value") and the **continuous thermal gradient** over the body (model preserved, crisp
+outline) are native behavior of the figure: always present, no parameter. The legend is what
+reports the map's values.
 
 ```python
-am.heatmap(data, cmap="thermal", smooth=True, legend=True, background="dark")
+am.heatmap(data, background="dark")
 ```
 
 ## Region names
 
-The resolver is forgiving on purpose. It accepts:
+**In code: the `Region` enum.** `from anatomapa import Region` gives 30 constants: the 14
+canonical ids plus `_LEFT`/`_RIGHT` versions of the 8 bilateral regions. Each member is the
+id string itself (`Region.TRUNK == "trunk"`), so it works anywhere a label works: `heatmap()`
+key or `region_map` value. The gain: editor autocomplete and typos becoming immediate errors,
+not runtime resolution failures. `list(Region)` or `list_regions()` list every valid id.
 
-| You write                                   | Becomes |
-|---------------------------------------------|---------|
-| `"HAND"`, `"hand"`, `"hands"`, `"mão"`, `"wrist"` | `hand` |
-| `"Dedo da mão"`, `"finger"`, `"fingers"`    | `finger` |
-| `"trunk"`, `"tronco"`, `"torso"`            | `trunk` |
+**From spreadsheets or free text: strings.** The resolver is forgiving on purpose: **PT or
+EN**, any case, accents or not, plurals and synonyms ("HAND", "hand", "mão", "wrist" become
+`hand`; "torso" becomes `trunk`). It never guesses: an unknown name raises `ResolutionError`
+with suggestions. Control it with `on_unknown`: `"error"` (default), `"skip"` or `"warn"`.
 
-That is: **PT or EN**, any case, with or without accents, plurals and synonyms. What it does
-**not** do is guess: an unknown name raises `ResolutionError` listing every bad name with
-suggestions for the closest match. Control it with `on_unknown`: `"error"` (default),
-`"skip"` (ignore silently) or `"warn"` (ignore with a warning).
-
-**Laterality.** Bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) accept
-a side: `"right hand"`, `"mão direita"` or the id `"hand_right"` paint only the right hand.
-Without a side, the value paints both sides.
+Both forms are equivalent under the hood:
 
 ```python
-am.heatmap({"right hand": 500, "left hand": 20, "right leg": 80})
+import anatomapa as am
+from anatomapa import Region
+
+am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # in code: typo-proof
+am.heatmap({"left hand": 100, "trunk": 50})            # spreadsheet: human names
 ```
+
+**Laterality.** Bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) accept
+a side: `"right hand"`, `"mão direita"`, the id `"hand_right"` or `Region.HAND_RIGHT` paint
+only the right hand. Without a side (`"hand"`, `Region.HAND`), the value paints both sides.
 
 **Your own names.** If your spreadsheet uses internal codes, map them with `region_map`
 (side ids allowed; it takes precedence over the resolver):
@@ -204,10 +179,8 @@ am.heatmap({"chest": 900, "abdomen": 1200, "pelvis": 500})  # or per part
 A value on the parent flows down to its children automatically; if you provide a specific
 part, it uses its own value. Same logic for `hand` to `finger` and `foot` to `toe`.
 
-**Regions with no data (`missing`).** With `"neutral"` (default), a region without a value
-shows in **neutral grey** (#9aa0a6), distinct from cold: "no data" is never mistaken for
-"few cases". With `"cold"`, no data becomes the cold color and the whole body gets colored
-(thermal-camera look).
+**Regions with no data.** A region without a value natively shows in **neutral grey**
+(#9aa0a6), distinct from cold: "no data" never reads as "few cases". No parameter.
 
 ## Data input
 
@@ -239,10 +212,22 @@ region's occurrences and `"sum"` sums the values. `None` (default) expects one r
 
 | Usage            | Result |
 |------------------|--------|
-| `fig.save("map.svg")` | writes the SVG file |
+| `fig.save("map.svg")` | writes the file; infers the format from the extension (`.svg`, `.png`, `.jpg`), uses the heatmap's `format`, or accepts `fig.save(path, format="png")` |
 | `fig.to_svg()`   | returns the SVG as a `str` |
-| `str(fig)`       | same, raw SVG (handy in templates) |
+| `fig.to_png()`   | returns the PNG as `bytes` (requires `anatomapa[raster]`) |
+| `fig.to_jpeg()`  | returns the JPEG as `bytes` (requires `anatomapa[raster]`) |
+| `str(fig)`       | same as `to_svg()`, raw SVG (handy in templates) |
 | Jupyter cell     | renders inline automatically |
+
+For **raster** output (PNG/JPG/JPEG), install the optional extra `pip install anatomapa[raster]`
+(brings cairosvg and Pillow, imported only on demand; the core stays zero-dep and pure SVG
+never needs an extra). Without the extra installed, requesting png/jpg/jpeg raises an
+`ImportError` with the install hint:
+
+```python
+fig = am.heatmap(data, format="png")
+fig.save("map.png")
+```
 
 ## Full example
 
@@ -259,15 +244,14 @@ data = {"cabeça": 845, "braço": 1831, "antebraço": 974, "mão": 5153,
 result = am.validate(data)
 assert not result["unresolved"]
 
-# 2. Render the map: log scale (skewed data), thermal look on a dark background
-fig = am.heatmap(data, view="anterior", body="male", cmap="thermal",
-                 scale="log", smooth=True, legend=True, background="dark")
+# 2. Render the map: thermal look on a dark background
+fig = am.heatmap(data, body="male", background="dark")
 fig.save("map.svg")
 ```
 
 ## Utilities
 
-**`validate(values, view="anterior", body="male", region_map=None, assets_dir=None)`**
+**`validate(values, body="male", region_map=None)`**
 does the dry-run: it does not render, it only shows what resolves and what does not.
 
 ```python
@@ -276,11 +260,11 @@ am.validate({"hand": 1, "pedro": 2, "right hand": 3})
 #  'unresolved': {'pedro': {'reason': '...', 'suggestions': ['finger', ...]}}}
 ```
 
-**`list_regions(view="anterior", lang="pt", body="male", assets_dir=None)`** lists the view's
-regions, each as `{"id", "label", "bilateral", "parent"}`:
+**`list_regions(lang="pt", body="male")`** lists the regions,
+each as `{"id", "label", "bilateral", "parent"}`:
 
 ```python
-am.list_regions(view="posterior", lang="en")
+am.list_regions(lang="en")
 # [{'id': 'head', 'label': 'Head', 'bilateral': False, 'parent': None}, ...]
 ```
 
@@ -290,17 +274,8 @@ am.list_regions(view="posterior", lang="en")
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-maos.png?v=2" alt="Hands with high values" width="300" />
   &nbsp;
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-perna-peito.png?v=2" alt="Legs and chest with high values" width="300" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=2" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/dark-vs-light.png?v=2" alt="Dark versus light background comparison" width="640" />
-</p>
-
-<p align="center">
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=2" alt="Male and female anatomical model" width="420" />
 </p>
 

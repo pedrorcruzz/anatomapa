@@ -1,7 +1,7 @@
-"""Reader de arquivos Excel (.xlsx) sem dependências externas.
+"""Excel (.xlsx) reader with no external dependencies.
 
-Usa apenas zipfile e xml.etree.ElementTree da stdlib para parsear o formato
-Open XML (OOXML) que o .xlsx implementa internamente.
+Uses only zipfile and xml.etree.ElementTree from the stdlib to parse the
+Open XML (OOXML) format that .xlsx implements internally.
 """
 
 from __future__ import annotations
@@ -23,19 +23,23 @@ _NS = {
     "r": _NS_RELATIONSHIPS,
 }
 
+# A última coluna do Excel é XFD, então letra de coluna tem no máximo 3 caracteres.
+# Sem esse limite, um nome de cabeçalho digitado errado viraria um índice gigante.
+_MAX_COL_LETTERS = 3
+
 
 def _col_letter_to_index(letter: str) -> int:
-    """Converte uma letra de coluna (A, B, ..., Z, AA, AB, ...) para índice base 0.
+    """Convert a column letter (A, B, ..., Z, AA, AB, ...) to a zero-based index.
 
     Parameters
     ----------
     letter:
-        Letra ou sequência de letras representando a coluna (ex: "A", "D", "AA").
+        Letter or sequence of letters naming the column (e.g. "A", "D", "AA").
 
     Returns
     -------
     int
-        Índice da coluna com base zero.
+        Zero-based column index.
     """
     letter = letter.upper().strip()
     index = 0
@@ -45,17 +49,17 @@ def _col_letter_to_index(letter: str) -> int:
 
 
 def _cell_col_index(cell_ref: str) -> int:
-    """Extrai o índice de coluna (base 0) de uma referência de célula como 'D5'.
+    """Extract the zero-based column index from a cell reference such as 'D5'.
 
     Parameters
     ----------
     cell_ref:
-        Referência de célula no formato padrão do Excel (ex: "A1", "D5", "AA10").
+        Cell reference in the standard Excel format (e.g. "A1", "D5", "AA10").
 
     Returns
     -------
     int
-        Índice da coluna com base zero.
+        Zero-based column index.
     """
     match = re.match(r"([A-Za-z]+)", cell_ref)
     if not match:
@@ -64,17 +68,17 @@ def _cell_col_index(cell_ref: str) -> int:
 
 
 def _cell_row_index(cell_ref: str) -> int:
-    """Extrai o índice de linha (base 0) de uma referência de célula como 'D5'.
+    """Extract the zero-based row index from a cell reference such as 'D5'.
 
     Parameters
     ----------
     cell_ref:
-        Referência de célula no formato padrão do Excel (ex: "A1", "D5").
+        Cell reference in the standard Excel format (e.g. "A1", "D5").
 
     Returns
     -------
     int
-        Índice da linha com base zero.
+        Zero-based row index.
     """
     match = re.search(r"(\d+)$", cell_ref)
     if not match:
@@ -83,20 +87,20 @@ def _cell_row_index(cell_ref: str) -> int:
 
 
 def _parse_shared_strings(zf: zipfile.ZipFile) -> list[str]:
-    """Lê a tabela de strings compartilhadas do arquivo .xlsx.
+    """Read the shared strings table from the .xlsx file.
 
-    No formato OOXML, células do tipo string armazenam apenas um índice
-    que aponta para esta tabela, evitando repetição de texto no arquivo.
+    In OOXML, string cells store only an index pointing into this table,
+    which avoids repeating text throughout the file.
 
     Parameters
     ----------
     zf:
-        Arquivo zip do .xlsx aberto.
+        Open .xlsx zip archive.
 
     Returns
     -------
     list[str]
-        Lista de strings indexada conforme o arquivo sharedStrings.xml.
+        Strings indexed as in the sharedStrings.xml file.
     """
     if "xl/sharedStrings.xml" not in zf.namelist():
         return []
@@ -112,20 +116,20 @@ def _parse_shared_strings(zf: zipfile.ZipFile) -> list[str]:
 
 
 def _parse_workbook_sheets(zf: zipfile.ZipFile) -> list[tuple[str, str]]:
-    """Lê o mapeamento de nome de aba para arquivo de planilha dentro do zip.
+    """Read the mapping from sheet name to worksheet file inside the zip.
 
-    Combina xl/workbook.xml (nomes e rIds) com xl/_rels/workbook.xml.rels
-    (rId -> caminho do arquivo) para produzir pares (nome, caminho).
+    Combines xl/workbook.xml (names and rIds) with xl/_rels/workbook.xml.rels
+    (rId -> file path) to produce (name, path) pairs.
 
     Parameters
     ----------
     zf:
-        Arquivo zip do .xlsx aberto.
+        Open .xlsx zip archive.
 
     Returns
     -------
     list[tuple[str, str]]
-        Lista de (nome_da_aba, caminho_no_zip) na ordem do workbook.
+        List of (sheet_name, path_in_zip) in workbook order.
     """
     wb_tree = ET.fromstring(zf.read("xl/workbook.xml"))
     rels_tree = ET.fromstring(zf.read("xl/_rels/workbook.xml.rels"))
@@ -158,24 +162,24 @@ def _parse_worksheet(
     sheet_path: str,
     shared_strings: list[str],
 ) -> list[list[str]]:
-    """Parseia uma planilha e retorna as linhas como lista de listas de strings.
+    """Parse a worksheet and return its rows as lists of strings.
 
-    Células vazias dentro de uma linha são representadas como strings vazias.
-    Linhas completamente vazias são omitidas.
+    Empty cells within a row are represented as empty strings. Rows that are
+    entirely empty are omitted.
 
     Parameters
     ----------
     zf:
-        Arquivo zip do .xlsx aberto.
+        Open .xlsx zip archive.
     sheet_path:
-        Caminho da planilha dentro do zip (ex: "xl/worksheets/sheet1.xml").
+        Worksheet path inside the zip (e.g. "xl/worksheets/sheet1.xml").
     shared_strings:
-        Tabela de strings compartilhadas para resolver índices de string.
+        Shared strings table used to resolve string indices.
 
     Returns
     -------
     list[list[str]]
-        Linhas não vazias, cada uma como lista de valores de célula em string.
+        Non-empty rows, each one a list of cell values as strings.
     """
     tree = ET.fromstring(zf.read(sheet_path))
     sheet_data = tree.find("s:sheetData", _NS)
@@ -219,35 +223,39 @@ def _resolve_col_index(
     col: int | str,
     header_row: list[str] | None,
 ) -> int:
-    """Converte a especificação de coluna para índice inteiro base 0.
+    """Convert a column specification into a zero-based integer index.
 
-    Aceita três formas:
-    - int: índice direto (base 0).
-    - str de um ou mais dígitos não-alfabéticos: tratado como letra de coluna.
-    - str com letras: letra de coluna (ex: "A", "D", "AA") ou nome de cabeçalho.
+    Accepts three forms:
+    - int: direct zero-based index.
+    - str of up to three letters: spreadsheet column letter ("A", "D", "AA").
+    - str matching a header cell: header name.
+
+    A header name is tried first; only then is the string read as a column
+    letter. Strings longer than three letters are never column letters, since
+    Excel stops at "XFD", so they can only be header names.
 
     Parameters
     ----------
     col:
-        Especificação da coluna como índice int, letra ("D") ou nome de cabeçalho.
+        Column specification: int index, letter ("D") or header name.
     header_row:
-        Lista de cabeçalhos da primeira linha, usada para resolver nomes de coluna.
-        None quando header=False.
+        Headers from the first row, used to resolve column names. None when
+        header=False.
 
     Returns
     -------
     int
-        Índice da coluna com base zero.
+        Zero-based column index.
 
     Raises
     ------
     ValueError
-        Se a especificação não puder ser resolvida.
+        If the specification cannot be resolved.
     """
     if isinstance(col, int):
         return col
 
-    is_col_letter = bool(re.fullmatch(r"[A-Za-z]+", col))
+    is_col_letter = bool(re.fullmatch(r"[A-Za-z]{1,%d}" % _MAX_COL_LETTERS, col))
 
     if header_row is not None:
         # Com cabeçalho: tenta resolver pelo nome primeiro
@@ -277,40 +285,40 @@ def from_xlsx(
     header: bool = True,
     aggregate: str | None = None,
 ) -> dict[str, float]:
-    """Parseia um arquivo Excel (.xlsx) e retorna um mapeamento de região para valor.
+    """Parses an Excel (.xlsx) file and returns a mapping of region to value.
 
-    O arquivo .xlsx é lido sem nenhuma dependência externa: apenas zipfile e
-    xml.etree.ElementTree da stdlib são usados.
+    The .xlsx file is read with no external dependencies: only the stdlib's
+    zipfile and xml.etree.ElementTree are used.
 
     Parameters
     ----------
     source:
-        Caminho do arquivo como string, bytes do arquivo ou objeto binário tipo arquivo.
+        File path as a string, file bytes, or a binary file-like object.
     sheet:
-        Nome da aba a ler. None usa a primeira aba do workbook.
+        Name of the sheet to read. None uses the first sheet in the workbook.
     region_col:
-        Coluna da região: índice inteiro base 0, letra de planilha ("D") ou
-        nome do cabeçalho (quando header=True).
+        Region column: zero-based integer index, spreadsheet letter ("D"),
+        or header name (when header=True).
     value_col:
-        Coluna do valor: mesmos formatos de region_col.
+        Value column: same formats as region_col.
     header:
-        True indica que a primeira linha contém cabeçalhos e deve ser pulada
-        ao coletar dados. Também habilita resolução de coluna por nome.
+        True indicates the first row contains headers and should be skipped
+        when collecting data. Also enables resolving columns by name.
     aggregate:
-        None para uma linha por região (o valor da última ocorrência prevalece),
-        "count" para contar ocorrências de cada região,
-        "sum" para somar os valores por região.
+        None for one row per region (the last occurrence's value wins),
+        "count" to count occurrences of each region,
+        "sum" to sum the values per region.
 
     Returns
     -------
     dict[str, float]
-        Mapeamento de rótulo de região para valor numérico, na ordem de aparição.
+        Mapping from region label to numeric value, in order of appearance.
 
     Raises
     ------
     ValueError
-        Se a aba solicitada não existir, a coluna não for encontrada ou um
-        valor não puder ser convertido para número.
+        If the requested sheet does not exist, the column is not found, or a
+        value cannot be converted to a number.
     """
     # Abre o zip: aceita caminho, bytes ou objeto binário
     if isinstance(source, str):
@@ -355,9 +363,23 @@ def from_xlsx(
     r_idx = _resolve_col_index(region_col, header_row)
     v_idx = _resolve_col_index(value_col, header_row)
 
+    # Em "count" a coluna de valor nunca é lida, então não precisa existir
+    required = [("region_col", region_col, r_idx)]
+    if aggregate != "count":
+        required.append(("value_col", value_col, v_idx))
+
+    # Índice fora da largura da planilha só geraria dado vazio; erra explicitamente
+    width = max(len(row) for row in rows)
+    for name, spec, idx in required:
+        if not 0 <= idx < width:
+            raise ValueError(
+                f"{name}={spec!r} aponta para a coluna de índice {idx}, "
+                f"fora da planilha, que tem {width} coluna(s)."
+            )
+
     # Valida que os índices existem nas linhas de dados
+    max_needed = max(idx for _, _, idx in required)
     for i, row in enumerate(data_rows):
-        max_needed = max(r_idx, v_idx)
         if len(row) <= max_needed:
             # Linha pode ter células ausentes no final; complementa com vazio
             data_rows[i] = row + [""] * (max_needed + 1 - len(row))

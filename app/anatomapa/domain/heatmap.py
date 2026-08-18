@@ -5,22 +5,22 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class Heatmap:
-    """Resultado de build_heatmap: mapeia ids de regiões para cores RGB.
+    """Result of build_heatmap: maps region ids to RGB colors.
 
     Parameters
     ----------
     colors:
-        Mapeamento do id canônico de região para tupla (R, G, B).
+        Mapping from the canonical region id to an (R, G, B) tuple.
     scale_name:
-        Nome da escala utilizada ("linear" ou "log").
+        Name of the scale used ("linear" or "log").
     value_min:
-        Valor mínimo da entrada antes da normalização.
+        Minimum input value before normalization.
     value_max:
-        Valor máximo da entrada antes da normalização.
+        Maximum input value before normalization.
     lang:
-        Idioma para os rótulos ("pt" ou "en").
+        Language for labels ("pt" or "en").
     title:
-        Título opcional para a figura.
+        Optional title for the figure.
     """
 
     colors: dict[str, tuple[int, int, int]]

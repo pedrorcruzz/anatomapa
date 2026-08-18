@@ -132,7 +132,7 @@ def _tag(elem: ET.Element) -> str:
 
 
 class TestSvgRendererFromModel(unittest.TestCase):
-    """Testa _render_from_model (base_svg=None)."""
+    """Tests _render_from_model (base_svg=None)."""
 
     def setUp(self):
         self.renderer = SvgRenderer()
@@ -270,7 +270,7 @@ class TestSvgRendererFromModel(unittest.TestCase):
 
 
 class TestSvgRendererOntoSvg(unittest.TestCase):
-    """Testa _render_onto_svg (base_svg fornecido)."""
+    """Tests _render_onto_svg (base_svg provided)."""
 
     def setUp(self):
         self.renderer = SvgRenderer()
@@ -289,6 +289,15 @@ class TestSvgRendererOntoSvg(unittest.TestCase):
         root = ET.fromstring(svg)
         paths = {e.get("id"): e for e in root.iter() if _tag(e) == "path"}
         self.assertEqual(paths["head"].get("fill"), "#0000ff")
+
+    def test_title_injected_into_base_svg(self):
+        base = _minimal_base_svg("head")
+        hm = _make_heatmap({"head": (0, 0, 255)}, title="Meu Mapa")
+        svg = str(self.renderer.render(hm, self.model, base_svg=base))
+        root = ET.fromstring(svg)
+        titles = [e for e in root.iter() if _tag(e) == "title"]
+        self.assertEqual(len(titles), 1)
+        self.assertEqual(titles[0].text, "Meu Mapa")
 
     def test_unknown_region_gets_placeholder(self):
         base = _minimal_base_svg("unknown_region")
@@ -375,7 +384,7 @@ class TestSvgRendererOntoSvg(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- skip testes com assets reais")
 class TestSvgRendererWithRealAssets(unittest.TestCase):
-    """Testa o renderer com o SVG base real do projeto."""
+    """Tests the renderer against the project's real base SVG."""
 
     def setUp(self):
         self.renderer = SvgRenderer()
@@ -416,7 +425,7 @@ class TestSvgRendererWithRealAssets(unittest.TestCase):
 
 
 class TestBuildSmoothSvgUnit(unittest.TestCase):
-    """Testa _build_smooth_svg diretamente (sem assets externos)."""
+    """Tests _build_smooth_svg directly (no external assets)."""
 
     def _make_colormap(self) -> "ColorMap":
         from anatomapa.color.registry import get_colormap
@@ -654,7 +663,7 @@ class TestBuildSmoothSvgUnit(unittest.TestCase):
 
 
 class TestFigureSave(unittest.TestCase):
-    """Testa Figure.save() (render/base.py linhas 42-43)."""
+    """Tests Figure.save() (render/base.py lines 42-43)."""
 
     def test_save_writes_file(self):
         from anatomapa.render.base import Figure

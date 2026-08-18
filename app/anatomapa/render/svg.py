@@ -540,7 +540,11 @@ def compose_views(
         title_elem = ET.SubElement(root, "title")
         title_elem.text = heatmap.title
 
-    _append_background_rect(root, vx, vy, total_w, vh, background)
+    # O fundo tem que cobrir também a faixa da legenda, que só é acrescentada
+    # depois e alarga o viewBox; senão sobra uma tira sem fundo à direita
+    draws_legend = legend and colormap is not None
+    legend_w = _legend_width(total_w, True) if draws_legend else 0.0
+    _append_background_rect(root, vx, vy, total_w + legend_w, vh, background)
 
     for index, panel_root in enumerate(roots):
         group = ET.SubElement(root, "g")
@@ -550,7 +554,7 @@ def compose_views(
         for child in list(panel_root):
             group.append(child)
 
-    if legend and colormap is not None:
+    if draws_legend:
         _append_legend(
             root, heatmap, colormap, vx, vy, total_w, vh,
             lang=lang, background=background,

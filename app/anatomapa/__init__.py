@@ -19,7 +19,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.1"
+__version__ = "0.3.2"
 __all__ = [
     "heatmap",
     "validate",
@@ -91,7 +91,10 @@ def heatmap(
     format:
         Output format: "svg" (default), "png", "jpg" or "jpeg". PNG and JPEG are
         rasterised when the figure is saved and require the optional "raster"
-        extra (pip install anatomapa[raster]).
+        extra (pip install anatomapa[raster]). Raster output is drawn with flat
+        per-region fills instead of the continuous thermal gradient, because
+        the gradient relies on SVG filters that raster converters do not
+        implement; the colours and the legend are the same.
     title:
         Optional title embedded in the SVG and in the legend.
     background:
@@ -159,6 +162,11 @@ def heatmap(
     scale_obj = get_scale("linear")
     base = _loader._ASSETS_DIR
 
+    # O degradê térmico é feito com filtro SVG, que os conversores raster não
+    # implementam: em PNG/JPG o corpo sairia branco. Para esses formatos a
+    # figura sai em preenchimento chapado, com a mesma cor por região.
+    smooth = fmt == "svg"
+
     def _render_one(
         view_name: str,
         with_legend: bool,
@@ -183,7 +191,7 @@ def heatmap(
             view_model,
             lang=lang,
             base_svg=base_svg,
-            smooth=True,
+            smooth=smooth,
             legend=with_legend,
             colormap=colormap,
             background=panel_background,

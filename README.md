@@ -90,7 +90,7 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Frente, costas, ou as duas lado a lado com uma legenda só |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Corpo masculino ou feminino |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Idioma dos rótulos escritos no SVG |
-| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Formato de saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` e saem chapados |
 | `title`      | `str` ou `None`                                                | `None`          | Título desenhado na figura |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Fundo da figura |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | O que fazer com nome não reconhecido |

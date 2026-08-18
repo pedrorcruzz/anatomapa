@@ -21,7 +21,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.6"
+__version__ = "0.3.7"
 __all__ = [
     "heatmap",
     "validate",
@@ -36,6 +36,12 @@ __all__ = [
     "Figure",
     "Heatmap",
     "ResolutionError",
+    "View",
+    "Body",
+    "Lang",
+    "Format",
+    "Background",
+    "OnUnknown",
 ]
 
 _VALID_ON_UNKNOWN = ("error", "skip", "warn")
@@ -43,8 +49,18 @@ _VALID_FORMATS = ("svg", "png", "jpg", "jpeg")
 _VALID_VIEWS = ("anterior", "posterior", "both")
 _VIEW = "anterior"
 
+# Os valores aceitos por cada parâmetro, como tipo. O editor sugere a lista ao
+# abrir as aspas e o type checker recusa um valor fora dela antes de rodar.
+# A validação em runtime continua, para quem chama sem checker.
+View = Literal["anterior", "posterior", "both"]
+Body = Literal["male", "female"]
+Lang = Literal["pt", "en"]
+Format = Literal["svg", "png", "jpg", "jpeg"]
+Background = Literal["dark", "light", "transparent"]
+OnUnknown = Literal["error", "skip", "warn"]
 
-def _views_of(view: str) -> tuple[str, ...]:
+
+def _views_of(view: View) -> tuple[str, ...]:
     """Views to draw: "both" expands into the two, front first and back second."""
     return ("anterior", "posterior") if view == "both" else (view,)
 
@@ -61,13 +77,13 @@ _renderer = SvgRenderer()
 @overload
 def heatmap(
     values,
-    view: str = ...,
-    body: str = ...,
-    lang: str = ...,
-    format: str = ...,
+    view: View = ...,
+    body: Body = ...,
+    lang: Lang = ...,
+    format: Format = ...,
     title: str | None = ...,
-    background: str = ...,
-    on_unknown: str = ...,
+    background: Background = ...,
+    on_unknown: OnUnknown = ...,
     region_map: Mapping[str, str] | None = ...,
     split: Literal[False] = False,
 ) -> Figure: ...
@@ -76,13 +92,13 @@ def heatmap(
 @overload
 def heatmap(
     values,
-    view: str = ...,
-    body: str = ...,
-    lang: str = ...,
-    format: str = ...,
+    view: View = ...,
+    body: Body = ...,
+    lang: Lang = ...,
+    format: Format = ...,
     title: str | None = ...,
-    background: str = ...,
-    on_unknown: str = ...,
+    background: Background = ...,
+    on_unknown: OnUnknown = ...,
     region_map: Mapping[str, str] | None = ...,
     split: Literal[True] = ...,
 ) -> tuple[Figure, Figure]: ...
@@ -92,13 +108,13 @@ def heatmap(
 @overload
 def heatmap(
     values,
-    view: str = ...,
-    body: str = ...,
-    lang: str = ...,
-    format: str = ...,
+    view: View = ...,
+    body: Body = ...,
+    lang: Lang = ...,
+    format: Format = ...,
     title: str | None = ...,
-    background: str = ...,
-    on_unknown: str = ...,
+    background: Background = ...,
+    on_unknown: OnUnknown = ...,
     region_map: Mapping[str, str] | None = ...,
     split: bool = ...,
 ) -> Figure | tuple[Figure, Figure]: ...
@@ -106,13 +122,13 @@ def heatmap(
 
 def heatmap(
     values,
-    view: str = "anterior",
-    body: str = "male",
-    lang: str = "pt",
-    format: str = "svg",
+    view: View = "anterior",
+    body: Body = "male",
+    lang: Lang = "pt",
+    format: Format = "svg",
     title: str | None = None,
-    background: str = "transparent",
-    on_unknown: str = "error",
+    background: Background = "transparent",
+    on_unknown: OnUnknown = "error",
     region_map: Mapping[str, str] | None = None,
     split: bool = False,
 ) -> Figure | tuple[Figure, Figure]:
@@ -322,7 +338,7 @@ def heatmap(
 
 def validate(
     values,
-    body: str = "male",
+    body: Body = "male",
     region_map: Mapping[str, str] | None = None,
 ) -> dict[str, dict]:
     """Dry-run check of which labels would be recognised, WITHOUT rendering.
@@ -351,9 +367,9 @@ def validate(
 
 
 def list_regions(
-    lang: str = "pt",
-    body: str = "male",
-    view: str | None = None,
+    lang: Lang = "pt",
+    body: Body = "male",
+    view: View | None = None,
 ) -> list[dict]:
     """List the anatomical regions that can be used as input.
 

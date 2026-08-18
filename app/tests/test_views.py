@@ -89,6 +89,12 @@ class TestBothViews(unittest.TestCase):
         dark = str(am.heatmap({"hand": 1}, view="both", background="dark"))
         self.assertEqual(dark.count('id="figure-background"'), 1)
 
+    def test_background_covers_the_legend_strip(self):
+        root = ET.fromstring(str(am.heatmap({"hand": 1}, view="both", background="dark")))
+        rect = next(e for e in root.iter() if e.get("id") == "figure-background")
+        total_w = float(root.get("viewBox").split()[2])
+        self.assertGreaterEqual(float(rect.get("width")), total_w)
+
     def test_viewbox_is_wider_than_one_panel(self):
         one = ET.fromstring(str(am.heatmap({"hand": 1}))).get("viewBox")
         both = ET.fromstring(self.svg).get("viewBox")
@@ -154,6 +160,34 @@ class TestListRegionsPerView(unittest.TestCase):
     def test_invalid_view_raises(self):
         with self.assertRaises(ValueError):
             am.list_regions(view="both")
+
+
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+class TestRasterUsesFlatFill(unittest.TestCase):
+    """Raster output must avoid SVG filters, which converters do not implement."""
+
+    def test_svg_keeps_the_gradient(self):
+        svg = str(am.heatmap({"hand": 5}))
+        self.assertIn("filter=", svg)
+        self.assertIn("mask=", svg)
+
+    def test_raster_drops_filter_and_mask(self):
+        for fmt in ("png", "jpg", "jpeg"):
+            with self.subTest(format=fmt):
+                flat = am.heatmap({"hand": 5}, format=fmt).to_svg()
+                self.assertNotIn("filter=", flat)
+                self.assertNotIn("mask=", flat)
+
+    def test_raster_keeps_legend_and_colors(self):
+        flat = am.heatmap({"hand": 5, "foot": 100}, format="png").to_svg()
+        self.assertIn("legend-bar", flat)
+        self.assertIn("hand-left", flat)
+
+    def test_raster_both_views_still_composes(self):
+        flat = am.heatmap({"trunk": 10}, view="both", format="png").to_svg()
+        self.assertNotIn("filter=", flat)
+        self.assertIn("anterior-view", flat)
+        self.assertIn("posterior-view", flat)
 
 
 class TestButtocksRegion(unittest.TestCase):

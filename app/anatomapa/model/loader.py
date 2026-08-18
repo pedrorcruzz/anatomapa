@@ -114,7 +114,6 @@ def load(
             id=rid,
             label_pt=item["label_pt"],
             label_en=item["label_en"],
-            aliases=tuple(item.get("aliases", [])),
             bilateral=item.get("bilateral", False),
             parent=item.get("parent"),
             geometry=geom,

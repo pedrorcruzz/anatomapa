@@ -19,7 +19,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.2"
+__version__ = "0.3.3"
 __all__ = [
     "heatmap",
     "validate",
@@ -66,7 +66,8 @@ def heatmap(
     background: str = "transparent",
     on_unknown: str = "error",
     region_map: dict[str, str] | None = None,
-) -> Figure:
+    split: bool = False,
+) -> Figure | tuple[Figure, Figure]:
     """Generate an anatomical heatmap figure.
 
     Parameters
@@ -91,9 +92,9 @@ def heatmap(
     format:
         Output format: "svg" (default), "png", "jpg" or "jpeg". PNG and JPEG are
         rasterised when the figure is saved and require the optional "raster"
-        extra (pip install anatomapa[raster]). Raster output is drawn with flat
-        per-region fills instead of the continuous thermal gradient, because
-        the gradient relies on SVG filters that raster converters do not
+        extra (pip install anatomapa[raster]). Raster output uses per-region
+        gradients that blend into the neighbouring regions, so the thermal
+        look is preserved without SVG filters, which raster converters do not
         implement; the colours and the legend are the same.
     title:
         Optional title embedded in the SVG and in the legend.
@@ -107,18 +108,25 @@ def heatmap(
     region_map:
         User mapping: custom label -> region id. Accepts canonical ids ("hand")
         and lateralised ids ("hand_left", "hand_right").
+    split:
+        Only for view="both". When False (default) the two views share one
+        figure, side by side with a single legend. When True, returns a tuple
+        (anterior, posterior) of two independent figures, each with its own
+        legend, sharing the same colour scale.
 
     Returns
     -------
-    Figure
-        A Figure object supporting .save(), .to_svg() and str().
+    Figure or tuple[Figure, Figure]
+        A Figure supporting .save(), .to_svg() and str(); with view="both"
+        and split=True, the pair (anterior, posterior) of such figures.
 
     Raises
     ------
     ResolutionError
         If a label in values cannot be resolved to a known region id.
     ValueError
-        If view, body, format or background is unknown.
+        If view, body, format or background is unknown, or if split=True is
+        used with a view other than "both".
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
@@ -135,6 +143,9 @@ def heatmap(
         raise ValueError(
             f"view inválida: {view!r}. Use uma de {list(_VALID_VIEWS)}."
         )
+
+    if split and view != "both":
+        raise ValueError('split=True só vale para view="both".')
 
     values = _as_dict(values)
     views = _views_of(view)
@@ -202,6 +213,15 @@ def heatmap(
     if len(views) == 1:
         _, svg = _render_one(views[0], True, background, title)
         return Figure(svg, format=fmt)
+
+    # "both" com split: duas figuras independentes, cada uma com a própria
+    # legenda; a escala é a mesma porque os valores são os mesmos
+    if split:
+        figures = []
+        for view_name in views:
+            _, svg = _render_one(view_name, True, background, title)
+            figures.append(Figure(svg, format=fmt))
+        return figures[0], figures[1]
 
     # "both": painéis sem legenda, fundo nem título próprios, compostos lado a
     # lado com uma legenda só; a escala é a mesma porque os valores são os mesmos

@@ -33,8 +33,8 @@
 
 **anatomapa** is a Python library that generates **anatomical heatmaps** of the external
 human body surface. You feed it quantitative data per region (frequency, intensity or event
-density) and it returns the body colored, always in the front (anterior) view, male or
-female, with color proportional to each region's value.
+density) and it returns the body colored, front and back views, male or female, with
+color proportional to each region's value.
 
 It fits any field that records the body region as a variable: venomous animal accidents
 (scorpions, snakes, spiders), occupational trauma, sports injuries, forensics, burns and
@@ -59,8 +59,7 @@ and Pillow. Pure SVG needs nothing.
 pip install "anatomapa[raster]"
 ```
 
-The quotes matter: shells like zsh and fish treat the brackets as a file pattern (glob), so
-quote the command to make it work everywhere.
+The quotes matter: shells like zsh and fish treat the brackets as a glob, so quote the command.
 
 > For development, clone the repository: `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
@@ -80,7 +79,7 @@ Done: an SVG with hands, feet and head colored by value. The rest of this manual
 ```python
 am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
            title=None, background="transparent", on_unknown="error",
-           region_map=None)
+           region_map=None, split=False)
 ```
 
 | Parameter    | Values                                                         | Default         | What it does |
@@ -89,11 +88,23 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Front, back, or the two side by side sharing one legend |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Male or female body |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Language of labels written in the SVG |
-| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output; png/jpg/jpeg need `pip install anatomapa[raster]` and use flat fills |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Output; png/jpg/jpeg need `pip install anatomapa[raster]` |
 | `title`      | `str` or `None`                                                | `None`          | Title drawn on the figure |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Figure background |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | What to do with an unrecognized name |
 | `region_map` | `dict {your label: region id}`                                 | `None`          | Your own name mapping; takes precedence |
+| `split`      | `True`, `False`                                                | `False`         | Only with `view="both"`: `True` returns the (front, back) pair |
+
+**`split`** only applies to `view="both"`: `False` draws the two views side by side in a single
+figure with one legend; `True` makes the call return the **pair** `(anterior, posterior)` of
+independent figures, each with its own legend, sharing the same color scale. Any other `view`
+raises `ValueError`.
+
+```python
+front, back = am.heatmap(data, view="both", split=True)
+front.save("front.png")
+back.save("back.png")
+```
 
 Returns a [`Figure`](#output-the-figure-object) object. An unknown region name raises
 `ResolutionError` (the library's public exception). The color palette is always the
@@ -137,31 +148,24 @@ am.heatmap(data, region_map={"HAND": Region.HAND, "FOREARM": Region.FOREARM})
 ## Regions and hierarchy
 
 There are **15 regions**. `trunk` is a **hierarchical aggregator**: it has no geometry of its
-own, it only distributes its value to its children. Bilateral regions take one value for both
-sides (or an explicit side). The trunk splits differently per view, as in any external anatomy
-atlas: the front has chest, abdomen and pelvis; the back has back and buttocks.
+own, it only distributes its value to its children, which change per view, as in any external
+anatomy atlas. **Bilateral** regions take a side through the `_left`/`_right` suffix
+(e.g. `hand_left`); without the suffix, the value paints both sides.
 
-| id         | Label    | View            | Bilateral | Parent  |
-|------------|----------|-----------------|-----------|---------|
-| `head`     | Head     | both            | no        |         |
-| `trunk`    | Trunk    | aggregator      | no        |         |
-| `chest`    | Chest    | front only      | no        | `trunk` |
-| `abdomen`  | Abdomen  | front only      | no        | `trunk` |
-| `pelvis`   | Pelvis   | front only      | no        | `trunk` |
-| `back`     | Back     | back only       | no        | `trunk` |
-| `buttocks` | Buttocks | back only       | no        | `trunk` |
-| `arm`     | Arm      | both            | yes       |         |
-| `forearm` | Forearm  | both            | yes       |         |
-| `hand`    | Hand     | both            | yes       |         |
-| `finger`  | Finger   | both            | yes       | `hand`  |
-| `thigh`   | Thigh    | both            | yes       |         |
-| `leg`     | Leg      | both            | yes       |         |
-| `foot`    | Foot     | both            | yes       |         |
-| `toe`     | Toe      | both            | yes       | `foot`  |
+### Front view (`view="anterior"`, default)
 
-**Views.** `view="anterior"` (default) draws the front, `"posterior"` the back and `"both"`
-the two side by side, sharing one colour scale and one legend. `list_regions(view=...)` tells
-what is valid in each. E.g. `am.heatmap({"trunk": 2602}, view="both", background="dark")`.
+`head` · `chest` · `abdomen` · `pelvis` · `arm` (arm/shoulder) · `forearm` · `hand` ·
+`finger` (hand fingers) · `thigh` · `leg` · `foot` · `toe` (foot toes).
+The `trunk` aggregator paints `chest` + `abdomen` + `pelvis`.
+
+### Back view (`view="posterior"`)
+
+`head` · `back` (dorsum) · `buttocks` · `arm` · `forearm` · `hand` · `finger` · `thigh` ·
+`leg` · `foot` · `toe`.
+The `trunk` aggregator paints `back` + `buttocks`.
+
+`buttocks` and `back` are exclusive to the posterior view; `chest`, `abdomen` and `pelvis`
+to the anterior; everything else is valid in both. `list_regions(view=...)` filters per view.
 
 **Rollup (parent-to-children inheritance).** Send data at whatever level you have:
 
@@ -215,8 +219,9 @@ region's occurrences and `"sum"` sums the values. `None` (default) expects one r
 
 For **raster** output (PNG/JPG/JPEG), install the optional extra `pip install anatomapa[raster]`
 (brings cairosvg and Pillow, imported only on demand; the core stays zero-dep and pure SVG
-never needs an extra). Without the extra installed, requesting png/jpg/jpeg raises an
-`ImportError` with the install hint:
+never needs an extra). Raster output uses per-region gradients that blend into neighbouring
+regions, so the thermal look is preserved in every format. Without the extra installed,
+requesting png/jpg/jpeg raises an `ImportError` with the install hint:
 
 ```python
 fig = am.heatmap(data, format="png")
@@ -229,7 +234,6 @@ Scorpion sting topography (frequency per region), from raw data to the final map
 
 ```python
 import anatomapa as am
-
 from anatomapa import Region
 
 data = {Region.HEAD: 845, Region.ARM: 1831, Region.FOREARM: 974, Region.HAND: 5153,
@@ -272,7 +276,6 @@ am.list_regions(lang="en", view="posterior")
   &nbsp;
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-perna-peito.png?v=2" alt="Legs and chest with high values" width="300" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=2" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/dark-vs-light.png?v=2" alt="Dark versus light background comparison" width="640" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=2" alt="Male and female anatomical model" width="420" />
 </p>
 

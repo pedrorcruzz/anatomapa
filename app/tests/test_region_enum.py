@@ -44,9 +44,23 @@ class TestRegionEnumUsage(unittest.TestCase):
     """Uso do enum como chave de heatmap e comportamento de string."""
 
     def _fills(self, svg: str) -> dict[str, str]:
-        return dict(
-            re.findall(r'id="(hand-left|hand-right)"[^>]*fill="(#[0-9a-f]{6})"', svg)
-        )
+        """Own colour of each hand, unwrapping the blending gradient."""
+        fills = {}
+        for rid in ("hand-left", "hand-right"):
+            match = re.search(r'id="%s"[^>]*fill="([^"]+)"' % rid, svg)
+            if not match:
+                continue
+            fill = match.group(1)
+            # No gradiente de mescla, a cor propria e o stop central (0.3)
+            if fill.startswith("url(#"):
+                grad = re.search(
+                    r'id="grad-%s".*?offset="0.3" stop-color="(#[0-9a-f]{6})"' % rid,
+                    svg,
+                    re.S,
+                )
+                fill = grad.group(1)
+            fills[rid] = fill
+        return fills
 
     def test_member_is_str(self):
         self.assertIsInstance(Region.TRUNK, str)

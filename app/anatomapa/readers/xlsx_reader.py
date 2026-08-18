@@ -7,6 +7,7 @@ Open XML (OOXML) format that .xlsx implements internally.
 from __future__ import annotations
 
 import io
+import os
 import re
 import zipfile
 import xml.etree.ElementTree as ET
@@ -278,7 +279,7 @@ def _resolve_col_index(
 
 
 def from_xlsx(
-    source: Union[str, bytes, io.IOBase],
+    source: Union[str, os.PathLike, bytes, io.IOBase],
     sheet: str | None = None,
     region_col: int | str = 0,
     value_col: int | str = 1,
@@ -293,7 +294,8 @@ def from_xlsx(
     Parameters
     ----------
     source:
-        File path as a string, file bytes, or a binary file-like object.
+        File path as a string or a path-like object (pathlib.Path), file bytes,
+        or a binary file-like object.
     sheet:
         Name of the sheet to read. None uses the first sheet in the workbook.
     region_col:

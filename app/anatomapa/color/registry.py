@@ -71,9 +71,9 @@ _SCALES: dict[str, Scale] = {
 
 
 def get_colormap(name: str) -> ColorMap:
-    """Retorna um ColorMap registrado pelo nome.
+    """Return a ColorMap registered under the given name.
 
-    Lança ValueError para nomes desconhecidos.
+    Raises ValueError for unknown names.
     """
     try:
         return _COLORMAPS[name]
@@ -85,9 +85,9 @@ def get_colormap(name: str) -> ColorMap:
 
 
 def get_scale(name: str) -> Scale:
-    """Retorna uma Scale registrada pelo nome.
+    """Return a Scale registered under the given name.
 
-    Lança ValueError para nomes desconhecidos.
+    Raises ValueError for unknown names.
     """
     try:
         return _SCALES[name]
@@ -97,10 +97,10 @@ def get_scale(name: str) -> Scale:
 
 
 def list_colormaps() -> list[str]:
-    """Retorna lista ordenada com os nomes dos colormaps disponíveis."""
+    """Return a sorted list with the names of the available colormaps."""
     return sorted(_COLORMAPS)
 
 
 def list_scales() -> list[str]:
-    """Retorna lista ordenada com os nomes das escalas disponíveis."""
+    """Return a sorted list with the names of the available scales."""
     return sorted(_SCALES)

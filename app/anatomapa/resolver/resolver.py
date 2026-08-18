@@ -22,7 +22,7 @@ class ResolutionError(ValueError):
 
 
 def _plural_variants(slug: str) -> list[str]:
-    """Gera variantes singulares de um slug para tolerar plurais (fallback)."""
+    """Generate singular variants of a slug so plurals are tolerated."""
     variants = [slug]
     if slug in _IRREGULAR_PLURALS:
         variants.append(_IRREGULAR_PLURALS[slug])
@@ -34,10 +34,11 @@ def _plural_variants(slug: str) -> list[str]:
 
 
 def _extract_side(slug: str) -> tuple[str, str | None]:
-    """Separa o lado (left/right) de um slug, retornando (base_slug, side).
+    """Split the side (left/right) out of a slug, returning (base_slug, side).
 
-    Reconhece palavras de lado em PT e EN em qualquer posição (ex.: "mao_direita",
-    "right_hand", "hand_right"). Sem palavra de lado, retorna (slug, None).
+    Recognises side words in Portuguese and English in any position (e.g.
+    "mao_direita", "right_hand", "hand_right"). With no side word, returns
+    (slug, None).
     """
     tokens = [t for t in slug.split("_") if t]
     side: str | None = None
@@ -55,7 +56,7 @@ def _extract_side(slug: str) -> tuple[str, str | None]:
 
 
 class _Lookup:
-    """Índices pré-computados do modelo para resolução rápida."""
+    """Model indices precomputed for fast resolution."""
 
     def __init__(self, model: AnatomicalModel) -> None:
         # ids canônicos já estão em forma de slug (minúsculo, sem acento)
@@ -71,7 +72,7 @@ class _Lookup:
         self.candidates = sorted(set(self.canonical) | set(self.alias_to_id))
 
     def match_base(self, slug: str) -> str | None:
-        """Resolve um slug base (sem lado) para o id canônico, tolerando plural."""
+        """Resolve a base slug (no side) to its canonical id, tolerating plurals."""
         for cand in _plural_variants(slug):
             if cand in self.canonical:
                 return cand
@@ -86,10 +87,11 @@ def _resolve_one(
     region_map: dict[str, str],
     region_map_slug: dict[str, str],
 ) -> tuple[str | None, str | None]:
-    """Resolve um único rótulo. Retorna (region_key, motivo_do_erro).
+    """Resolve a single label. Returns (region_key, failure_reason).
 
-    region_key pode ser o id canônico ("hand") ou lateralizado ("hand_left").
-    Quando não resolve, region_key é None e motivo pode conter a explicação.
+    region_key may be the canonical id ("hand") or a lateralised one
+    ("hand_left"). When it does not resolve, region_key is None and the reason
+    may carry the explanation.
     """
     # 1. region_map do usuário tem precedência (exato e por slug)
     if label in region_map:
@@ -119,7 +121,7 @@ def _resolve_one(
 
 
 def _format_errors(unresolved: dict[str, dict]) -> str:
-    """Monta a mensagem de erro em lote listando cada rótulo não resolvido."""
+    """Build the batched error message listing every unresolved label."""
     lines = [f"Não foi possível resolver {len(unresolved)} rótulo(s):"]
     for label, info in unresolved.items():
         detail = info["reason"]
@@ -134,12 +136,12 @@ def analyze(
     model: AnatomicalModel,
     region_map: dict[str, str] | None = None,
 ) -> dict[str, dict]:
-    """Analisa rótulos SEM levantar erro (dry-run). Base para resolve() e validate().
+    """Analyse labels WITHOUT raising (dry run). Backs resolve() and validate().
 
     Returns
     -------
     dict
-        {"resolved": {rótulo: region_key}, "unresolved": {rótulo: {"reason", "suggestions"}}}.
+        {"resolved": {label: region_key}, "unresolved": {label: {"reason", "suggestions"}}}.
     """
     region_map = region_map or {}
     region_map_slug = {slugify(k): v for k, v in region_map.items()}

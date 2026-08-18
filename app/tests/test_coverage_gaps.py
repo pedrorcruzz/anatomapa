@@ -1,12 +1,13 @@
-"""Testes focados em cobrir os gaps de cobertura remanescentes.
+"""Tests aimed at the remaining coverage gaps.
 
-Módulos alvo:
-- domain/model.py (linhas 20-23): regions(view=...), get() miss, ids()
-- domain/colormap.py (linha 43): span == 0 no color_at
-- readers/csv_reader.py (linhas 36-38, 41): leitura de arquivo e string multiline
-- readers/json_reader.py (linhas 40-41, 51): arquivo e formato inválido
-- color/registry.py (linhas 89, 94): list_colormaps, list_scales
-- model/loader.py (linhas 45, 49, 55, 58): paths SVG sem namespace, sem grupo regions
+Target modules:
+- domain/model.py (lines 20-23): regions(view=...), get() miss, ids()
+- domain/colormap.py (line 43): span == 0 in color_at
+- readers/csv_reader.py (lines 36-38, 41): file and multiline string reading
+- readers/json_reader.py (lines 40-41, 51): file and invalid format
+- color/registry.py (lines 89, 94): list_colormaps, list_scales
+- model/loader.py (lines 45, 49, 55, 58): SVG paths without namespace, without
+  a regions group
 """
 
 import io
@@ -53,7 +54,7 @@ def _make_model() -> AnatomicalModel:
 
 
 class TestAnatomicalModelMethods(unittest.TestCase):
-    """Cobre linhas 20-23 de domain/model.py."""
+    """Covers lines 20-23 of domain/model.py."""
 
     def setUp(self):
         self.model = _make_model()
@@ -96,7 +97,7 @@ class TestAnatomicalModelMethods(unittest.TestCase):
 
 
 class TestColorMapEdgeCases(unittest.TestCase):
-    """Cobre linha 43 de domain/colormap.py: span == 0."""
+    """Covers line 43 of domain/colormap.py: span == 0."""
 
     def test_span_zero_returns_lo_rgb(self):
         # Dois stops com mesmo t: span == 0
@@ -113,7 +114,7 @@ class TestColorMapEdgeCases(unittest.TestCase):
 
 
 class TestCsvReaderFilePath(unittest.TestCase):
-    """Cobre linhas 36-38 e 41 de readers/csv_reader.py."""
+    """Covers lines 36-38 and 41 of readers/csv_reader.py."""
 
     def test_reads_from_file_path(self):
         from anatomapa.readers.csv_reader import from_csv
@@ -163,7 +164,7 @@ class TestCsvReaderFilePath(unittest.TestCase):
 
 
 class TestJsonReaderFilePath(unittest.TestCase):
-    """Cobre linhas 40-41 e 51 de readers/json_reader.py."""
+    """Covers lines 40-41 and 51 of readers/json_reader.py."""
 
     def test_reads_from_file_path_object_format(self):
         from anatomapa.readers.json_reader import from_json
@@ -213,7 +214,7 @@ class TestJsonReaderFilePath(unittest.TestCase):
 
 
 class TestColorRegistry(unittest.TestCase):
-    """Cobre linhas 89 e 94 de color/registry.py."""
+    """Covers lines 89 and 94 of color/registry.py."""
 
     def test_list_colormaps_returns_sorted_list(self):
         from anatomapa.color.registry import list_colormaps
@@ -250,7 +251,7 @@ class TestColorRegistry(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- skipping testes de loader")
 class TestModelLoaderEdgeCases(unittest.TestCase):
-    """Cobre linhas 45, 49, 55, 58 de model/loader.py."""
+    """Covers lines 45, 49, 55, 58 of model/loader.py."""
 
     def test_load_male_anterior_returns_model(self):
         from anatomapa.model.loader import load

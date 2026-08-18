@@ -41,7 +41,7 @@ _VIEW = "anterior"
 
 
 def _as_dict(values) -> dict:
-    """Aceita dict ou iterável de pares (região, valor) e devolve sempre um dict."""
+    """Accept a dict or an iterable of (region, value) pairs, always returning a dict."""
     if isinstance(values, dict):
         return values
     return dict(values)

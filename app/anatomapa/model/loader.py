@@ -17,7 +17,7 @@ _VALID_VIEWS = ("anterior", "posterior")
 
 
 def _strip_suffix(element_id: str) -> tuple[str, str]:
-    """Retorna (canonical_id, side) onde side é 'left', 'right' ou 'center'."""
+    """Return (canonical_id, side) where side is 'left', 'right' or 'center'."""
     for suffix in _BILATERAL_SUFFIXES:
         if element_id.endswith(suffix):
             return element_id[: -len(suffix)], suffix.lstrip("-")
@@ -25,13 +25,13 @@ def _strip_suffix(element_id: str) -> tuple[str, str]:
 
 
 def _parse_svg(path: str) -> dict[str, dict[str, str]]:
-    """Parseia o arquivo SVG e extrai a geometria das regiões agrupada por id canônico.
+    """Parse the SVG file and extract region geometry grouped by canonical id.
 
     Returns
     -------
     dict[str, dict[str, str]]
-        Mapeamento do id canônico para {side: path_d}, onde side é
-        'center', 'left' ou 'right'.
+        Mapping from canonical id to {side: path_d}, where side is
+        'center', 'left' or 'right'.
     """
     tree = ET.parse(path)
     root = tree.getroot()
@@ -70,26 +70,26 @@ def load(
     assets_dir: str | None = None,
     body: str = "male",
 ) -> AnatomicalModel:
-    """Carrega e armazena em cache um AnatomicalModel para a vista e corpo informados.
+    """Load and cache an AnatomicalModel for the given view and body.
 
     Parameters
     ----------
     view:
-        Vista do corpo: "anterior" ou "posterior".
+        Body view: "anterior" or "posterior".
     assets_dir:
-        Diretório contendo os arquivos SVG e regions.json. Padrão: assets/.
+        Directory holding the SVG files and regions.json. Defaults to assets/.
     body:
-        Tipo de corpo: "male" ou "female".
+        Body type: "male" or "female".
 
     Returns
     -------
     AnatomicalModel
-        Modelo imutável com a geometria das regiões extraída do SVG.
+        Immutable model with the region geometry extracted from the SVG.
 
     Raises
     ------
     ValueError
-        Se body ou view forem desconhecidos.
+        If body or view is unknown.
     """
     if body not in _VALID_BODIES:
         raise ValueError(

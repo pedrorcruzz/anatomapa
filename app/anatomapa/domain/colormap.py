@@ -6,21 +6,21 @@ from dataclasses import dataclass
 
 @dataclass(frozen=True)
 class ColorMap:
-    """Colormap linear por partes definido por pontos de controle.
+    """Piecewise linear colormap defined by control points.
 
     Parameters
     ----------
     stops:
-        Sequência de (t, (r, g, b)) onde t está em [0, 1] e os valores RGB
-        estão em [0, 255]. Deve estar ordenada por t e incluir t=0.0 e t=1.0.
+        Sequence of (t, (r, g, b)) where t is in [0, 1] and the RGB values are
+        in [0, 255]. Must be sorted by t and include both t=0.0 and t=1.0.
     """
 
     stops: tuple[tuple[float, tuple[int, int, int]], ...]
 
     def color_at(self, t: float) -> tuple[int, int, int]:
-        """Retorna a cor RGB interpolada para um valor t em [0, 1].
+        """Return the interpolated RGB colour for a value t in [0, 1].
 
-        Valores fora de [0, 1] são limitados ao intervalo.
+        Values outside [0, 1] are clamped to the range.
         """
         t = max(0.0, min(1.0, t))
 

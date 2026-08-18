@@ -7,19 +7,19 @@ def aggregate_count(
     records: list[tuple[str, ...]],
     region_index: int = 0,
 ) -> dict[str, float]:
-    """Conta ocorrências de cada rótulo de região em registros brutos de eventos.
+    """Count occurrences of each region label in raw event records.
 
     Parameters
     ----------
     records:
-        Lista de tuplas onde uma posição contém o rótulo da região.
+        List of tuples where one position holds the region label.
     region_index:
-        Índice do rótulo da região dentro de cada tupla.
+        Index of the region label within each tuple.
 
     Returns
     -------
     dict[str, float]
-        Mapeamento do rótulo da região para a contagem de eventos.
+        Mapping from region label to event count.
     """
     counter: Counter[str] = Counter()
     for row in records:
@@ -32,21 +32,21 @@ def aggregate_sum(
     region_index: int = 0,
     value_index: int = 1,
 ) -> dict[str, float]:
-    """Soma valores por rótulo de região em registros brutos de eventos.
+    """Sum values per region label in raw event records.
 
     Parameters
     ----------
     records:
-        Lista de tuplas com rótulo da região e valor numérico.
+        List of tuples holding the region label and a numeric value.
     region_index:
-        Índice do rótulo da região dentro de cada tupla.
+        Index of the region label within each tuple.
     value_index:
-        Índice do valor numérico dentro de cada tupla.
+        Index of the numeric value within each tuple.
 
     Returns
     -------
     dict[str, float]
-        Mapeamento do rótulo da região para o valor somado.
+        Mapping from region label to the summed value.
     """
     totals: dict[str, float] = {}
     for row in records:

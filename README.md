@@ -134,9 +134,8 @@ canônicos mais as versões `_LEFT`/`_RIGHT` das 8 bilaterais. Cada membro é a 
 id (`Region.TRUNK == "trunk"`), então vale como chave de `heatmap()` ou valor de `region_map`.
 O ganho é autocomplete e typo virando erro imediato. `list(Region)` ou `list_regions()` listam.
 
-**Lateralidade.** As bilaterais (braço, antebraço, mão, dedo, coxa, perna, pé, dedo do pé)
-aceitam lado pelo sufixo do id: `Region.HAND_RIGHT` pinta só a direita; sem sufixo
-(`Region.HAND`), o valor pinta os dois lados. Pedir lado em região central é erro.
+**Lateralidade.** As 8 bilaterais aceitam lado pelo sufixo do id: `Region.HAND_RIGHT` pinta só
+a direita; sem sufixo (`Region.HAND`), pinta os dois lados. Pedir lado em região central é erro.
 
 **Seus nomes vindos da planilha: `region_map`.** Como os rótulos da sua fonte quase nunca
 batem com os ids, é você quem declara a correspondência, uma vez, no código. A chave é
@@ -149,26 +148,27 @@ am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM
 
 ## Regiões e hierarquia
 
-São **15 regiões**. `trunk` é um **agregador hierárquico**: sem geometria própria, só distribui
-valor para os filhos, que mudam conforme a vista, como em qualquer atlas de anatomia externa.
-As **bilaterais** aceitam sufixo `_left`/`_right` (ex.: `hand_left`); sem sufixo, pinta os dois lados.
+| Id | Região | Frente (`anterior`) | Costas (`posterior`) | Tem lado? |
+|---|---|:---:|:---:|:---:|
+| `head` | cabeça | ✓ | ✓ | não |
+| `trunk` | tronco (agregador) | ✓ | ✓ | não |
+| `chest` | peito | ✓ |  | não |
+| `abdomen` | abdômen | ✓ |  | não |
+| `pelvis` | pelve | ✓ |  | não |
+| `back` | dorso |  | ✓ | não |
+| `buttocks` | nádegas |  | ✓ | não |
+| `arm` | braço e ombro | ✓ | ✓ | sim |
+| `forearm` | antebraço | ✓ | ✓ | sim |
+| `hand` | mão | ✓ | ✓ | sim |
+| `finger` | dedos da mão | ✓ | ✓ | sim |
+| `thigh` | coxa | ✓ | ✓ | sim |
+| `leg` | perna | ✓ | ✓ | sim |
+| `foot` | pé | ✓ | ✓ | sim |
+| `toe` | dedos do pé | ✓ | ✓ | sim |
 
-### Visão frontal (`view="anterior"`, padrão)
-
-`head` (cabeça) · `chest` (peito) · `abdomen` (abdômen) · `pelvis` (pelve) ·
-`arm` (braço/ombro) · `forearm` (antebraço) · `hand` (mão) · `finger` (dedos da mão) ·
-`thigh` (coxa) · `leg` (perna) · `foot` (pé) · `toe` (dedos do pé).
-O agregador `trunk` pinta `chest` + `abdomen` + `pelvis`.
-
-### Visão posterior (`view="posterior"`)
-
-`head` (cabeça) · `back` (dorso) · `buttocks` (nádegas) · `arm` (braço) ·
-`forearm` (antebraço) · `hand` (mão) · `finger` (dedos da mão) · `thigh` (coxa) ·
-`leg` (perna) · `foot` (pé) · `toe` (dedos do pé).
-O agregador `trunk` pinta `back` + `buttocks`.
-
-`buttocks` e `back` são exclusivas da posterior; `chest`, `abdomen` e `pelvis`, da
-anterior; o resto vale nas duas. `list_regions(view=...)` filtra por vista.
+Das **15 regiões**, `trunk` é o agregador: sem geometria própria, pinta os filhos da vista
+desenhada (frente, `chest`+`abdomen`+`pelvis`; costas, `back`+`buttocks`). As bilaterais aceitam
+sufixo `_left`/`_right`; sem sufixo, pintam os dois lados. `list_regions(view=...)` filtra por vista.
 
 **Rollup (herança pai para filhos).** Mande o dado no nível que você tiver:
 

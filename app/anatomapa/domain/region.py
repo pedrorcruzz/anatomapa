@@ -14,3 +14,5 @@ class Region:
     parent: str | None
     geometry: dict[str, str]
     area: float | None = None
+    # Vistas em que a região tem desenho próprio; vazio = só agregadora (trunk)
+    views: tuple[str, ...] = ()

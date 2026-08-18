@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 import xml.etree.ElementTree as ET
 
 from anatomapa.domain.colormap import ColorMap
@@ -474,6 +475,86 @@ def _build_smooth_svg(
 
     if legend:
         _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
+
+    return ET.tostring(root, encoding="unicode")
+
+
+def _namespace_ids(svg: str, prefix: str) -> str:
+    """Prefix every id and internal reference so two panels can share one SVG.
+
+    Masks, filters and gradients are referenced by id, and ids are global to the
+    document. Without the prefix the second panel would silently reuse the first
+    panel's body mask.
+    """
+    svg = re.sub(r'id="([^"]+)"', lambda m: f'id="{prefix}{m.group(1)}"', svg)
+    svg = re.sub(r"url\(#([^)]+)\)", lambda m: f"url(#{prefix}{m.group(1)})", svg)
+    svg = re.sub(r'href="#([^"]+)"', lambda m: f'href="#{prefix}{m.group(1)}"', svg)
+    return svg
+
+
+def compose_views(
+    panels: list[tuple[str, str]],
+    heatmap: Heatmap,
+    colormap: ColorMap | None,
+    legend: bool = True,
+    lang: str = "pt",
+    background: str = "transparent",
+) -> str:
+    """Place already rendered panels side by side in a single SVG.
+
+    Parameters
+    ----------
+    panels:
+        Pairs of (prefix, svg) in drawing order, left to right. The prefix
+        namespaces the panel ids (``anterior-hand-left``).
+    heatmap:
+        Heatmap used for the shared legend; every panel shares the same scale.
+    colormap:
+        ColorMap for the legend gradient.
+    legend:
+        If True, draws a single legend to the right of the last panel.
+    lang:
+        Label language.
+    background:
+        Figure background, applied once over the whole composition.
+
+    Returns
+    -------
+    str
+        The composed SVG.
+    """
+    _validate_background(background)
+    ET.register_namespace("", _SVG_NS)
+
+    namespaced = [_namespace_ids(svg, prefix) for prefix, svg in panels]
+    roots = [ET.fromstring(svg) for svg in namespaced]
+    vx, vy, vw, vh = _parse_viewbox(namespaced[0])
+
+    gap = vw * 0.04
+    total_w = vw * len(roots) + gap * (len(roots) - 1)
+
+    root = ET.Element(f"{{{_SVG_NS}}}svg")
+    root.set("viewBox", f"{vx} {vy} {round(total_w, 2)} {vh}")
+
+    if heatmap.title:
+        title_elem = ET.SubElement(root, "title")
+        title_elem.text = heatmap.title
+
+    _append_background_rect(root, vx, vy, total_w, vh, background)
+
+    for index, panel_root in enumerate(roots):
+        group = ET.SubElement(root, "g")
+        offset = index * (vw + gap)
+        group.set("id", f"{panels[index][0]}view")
+        group.set("transform", f"translate({round(offset, 2)}, 0)")
+        for child in list(panel_root):
+            group.append(child)
+
+    if legend and colormap is not None:
+        _append_legend(
+            root, heatmap, colormap, vx, vy, total_w, vh,
+            lang=lang, background=background,
+        )
 
     return ET.tostring(root, encoding="unicode")
 

@@ -79,13 +79,15 @@ Pronto: um SVG com mãos, pés e cabeça coloridos por valor. O resto deste manu
 ## Parâmetros de `heatmap()`
 
 ```python
-am.heatmap(values, body="male", lang="pt", format="svg", title=None,
-           background="transparent", on_unknown="error", region_map=None)
+am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
+           title=None, background="transparent", on_unknown="error",
+           region_map=None)
 ```
 
 | Parâmetro    | Valores                                                        | Padrão          | O que faz |
 |--------------|----------------------------------------------------------------|-----------------|-----------|
 | `values`     | `dict {região: valor}` ou pares `(região, valor)`              | obrigatório     | Dados; chave pode ser `Region`; aceita a saída dos leitores |
+| `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Frente, costas, ou as duas lado a lado com uma legenda só |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Corpo masculino ou feminino |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Idioma dos rótulos escritos no SVG |
 | `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Formato de saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` |
@@ -104,14 +106,9 @@ de intensidade é sempre **linear**: a cor cresce proporcional ao valor.
 - **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão, sem
   fundo). As cores da legenda se adaptam ao fundo escolhido.
 
-A **legenda** com a barra de valores (mín..máx, rótulo no idioma de `lang`: "Valor" ou
-"Value") e o **degradê térmico contínuo** sobre o corpo (modelo preservado, contorno nítido)
-são comportamento nativo da figura: sempre presentes, sem parâmetro. É a legenda que informa
-os valores do mapa.
-
-```python
-am.heatmap(dados, background="dark")
-```
+A **legenda** com a barra de valores (mín..máx, rótulo conforme `lang`) e o **degradê térmico
+contínuo** sobre o corpo são nativos: sempre presentes, sem parâmetro. É a legenda que informa
+os valores do mapa. Ex.: `am.heatmap(dados, background="dark")`.
 
 ## Nomes de região
 
@@ -140,17 +137,20 @@ am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM
 
 ## Regiões e hierarquia
 
-São **14 regiões**. `trunk` é um **agregador hierárquico**: não tem geometria própria, só
+São **15 regiões**. `trunk` é um **agregador hierárquico**: não tem geometria própria, só
 distribui valor para os filhos. Bilaterais recebem um valor pros dois lados (ou lado explícito).
+O tronco se decompõe de forma diferente em cada vista, como em qualquer atlas de anatomia
+externa: de frente existem peito, abdômen e pelve; de costas, dorso e nádegas.
 
-| id        | PT-BR      | Vista            | Bilateral | Pai     |
-|-----------|------------|------------------|-----------|---------|
-| `head`    | Cabeça     | ambas            | não       |         |
-| `trunk`   | Tronco     | agregador        | não       |         |
-| `chest`   | Peito      | só frente        | não       | `trunk` |
-| `abdomen` | Abdômen    | só frente        | não       | `trunk` |
-| `pelvis`  | Pelve      | frente e costas  | não       | `trunk` |
-| `back`    | Costas     | só costas        | não       | `trunk` |
+| id         | PT-BR      | Vista            | Bilateral | Pai     |
+|------------|------------|------------------|-----------|---------|
+| `head`     | Cabeça     | ambas            | não       |         |
+| `trunk`    | Tronco     | agregador        | não       |         |
+| `chest`    | Peito      | só frente        | não       | `trunk` |
+| `abdomen`  | Abdômen    | só frente        | não       | `trunk` |
+| `pelvis`   | Pelve      | só frente        | não       | `trunk` |
+| `back`     | Costas     | só costas        | não       | `trunk` |
+| `buttocks` | Nádegas    | só costas        | não       | `trunk` |
 | `arm`     | Braço      | ambas            | sim       |         |
 | `forearm` | Antebraço  | ambas            | sim       |         |
 | `hand`    | Mão        | ambas            | sim       |         |
@@ -159,6 +159,10 @@ distribui valor para os filhos. Bilaterais recebem um valor pros dois lados (ou 
 | `leg`     | Perna      | ambas            | sim       |         |
 | `foot`    | Pé         | ambas            | sim       |         |
 | `toe`     | Dedo do pé | ambas            | sim       | `foot`  |
+
+**Vistas.** `view="anterior"` (padrão) desenha a frente, `"posterior"` as costas e `"both"`
+as duas lado a lado, com uma escala e uma legenda só. `list_regions(view=...)` diz o que vale
+em cada uma. Ex.: `am.heatmap({"trunk": 2602}, view="both", background="dark")`.
 
 **Rollup (herança pai para filhos).** Mande o dado no nível que você tiver:
 
@@ -254,12 +258,12 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 #                           'suggestions': ['hand', 'head', 'hand_left']}}}
 ```
 
-**`list_regions(lang="pt", body="male")`** lista as regiões,
-cada uma como `{"id", "label", "bilateral", "parent"}`:
+**`list_regions(lang="pt", body="male", view=None)`** lista as regiões, cada uma como
+`{"id", "label", "bilateral", "parent", "views"}`. Com `view`, filtra por vista:
 
 ```python
-am.list_regions(lang="pt")
-# [{'id': 'head', 'label': 'Cabeça', 'bilateral': False, 'parent': None}, ...]
+am.list_regions(view="posterior")
+# [{'id': 'head', ..., 'views': ['anterior', 'posterior']}, {'id': 'back', ...}, ...]
 ```
 
 ## Galeria

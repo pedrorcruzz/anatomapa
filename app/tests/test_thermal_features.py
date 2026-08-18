@@ -1,13 +1,13 @@
-"""Testes para as novas funcionalidades: thermal, body, smooth e legend.
+"""Tests for the thermal, body, smooth and legend features.
 
-Cobre:
-- Colormap "thermal" (extremos e meio)
-- Parâmetro body (male/female) na facade e no loader
-- Body inválido gera ValueError
-- Modo smooth: SVG contém feGaussianBlur e mask
-- Determinismo do modo smooth
-- Legend: SVG contém linearGradient e rótulos min/max
-- Sincronia viewBox com coordenadas da legenda
+Covers:
+- The "thermal" colormap (both ends and the middle)
+- The body parameter (male/female) in the facade and in the loader
+- An invalid body raising ValueError
+- Smooth mode: the SVG contains feGaussianBlur and mask
+- Determinism of smooth mode
+- Legend: the SVG contains linearGradient and min/max labels
+- viewBox staying in sync with the legend coordinates
 """
 
 import os
@@ -29,7 +29,7 @@ def _tag(elem: ET.Element) -> str:
 
 
 class TestThermalColormap(unittest.TestCase):
-    """Testa o colormap 'thermal'."""
+    """Tests the 'thermal' colormap."""
 
     def setUp(self):
         from anatomapa.color.registry import get_colormap
@@ -91,7 +91,7 @@ class TestThermalColormap(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de body")
 class TestBodyParameter(unittest.TestCase):
-    """Testa o parâmetro body na facade e no loader."""
+    """Tests the body parameter in the facade and in the loader."""
 
     def test_male_body_loads_correct_file(self):
         from anatomapa.model.loader import load
@@ -181,7 +181,7 @@ class TestBodyParameter(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de background")
 class TestBackgroundFacade(unittest.TestCase):
-    """Testa o parâmetro background via a facade heatmap(), fim a fim."""
+    """Tests the background parameter end to end through the heatmap() facade."""
 
     def test_dark_background_flat_mode(self):
         import anatomapa
@@ -227,7 +227,7 @@ class TestBackgroundFacade(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de smooth")
 class TestSmoothMode(unittest.TestCase):
-    """Testa o modo smooth (degradê contínuo)."""
+    """Tests smooth mode (continuous gradient)."""
 
     def _smooth_svg(self, values=None, body="male", **kwargs):
         import anatomapa
@@ -450,7 +450,7 @@ class TestSmoothMode(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de legend")
 class TestLegend(unittest.TestCase):
-    """Testa a legenda vertical de valores."""
+    """Tests the vertical value legend."""
 
     def _legend_svg(self, values=None, **kwargs):
         import anatomapa
@@ -648,7 +648,7 @@ class TestLegend(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de helper svg")
 class TestSvgHelpers(unittest.TestCase):
-    """Testa funções auxiliares do render/svg.py."""
+    """Tests the helper functions in render/svg.py."""
 
     def test_parse_viewbox_valid(self):
         from anatomapa.render.svg import _parse_viewbox
@@ -707,7 +707,7 @@ class TestSvgHelpers(unittest.TestCase):
 
 
 class TestSvgRendererSmoothNoOutline(unittest.TestCase):
-    """Testa smooth quando o SVG base não tem body-outline."""
+    """Tests smooth mode when the base SVG has no body-outline."""
 
     def test_smooth_without_outline_is_valid_xml(self):
         from anatomapa.render.svg import SvgRenderer, _build_smooth_svg
@@ -836,7 +836,7 @@ class TestSvgRendererSmoothNoOutline(unittest.TestCase):
 
 
 class TestSvgRendererNewParams(unittest.TestCase):
-    """Testa SvgRenderer.render() com novos parâmetros smooth/legend."""
+    """Tests SvgRenderer.render() with the smooth/legend parameters."""
 
     def _make_model(self):
         from anatomapa.domain.model import AnatomicalModel
@@ -954,7 +954,7 @@ class TestSvgRendererNewParams(unittest.TestCase):
 
 
 class TestBackgroundParameter(unittest.TestCase):
-    """Testa o parâmetro background no SvgRenderer (modo flat e smooth)."""
+    """Tests the background parameter on SvgRenderer (flat and smooth modes)."""
 
     def _make_model(self):
         from anatomapa.domain.model import AnatomicalModel

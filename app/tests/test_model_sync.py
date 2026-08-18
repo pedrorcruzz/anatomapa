@@ -1,7 +1,7 @@
-"""Testa que os ids de região nos SVGs estão sincronizados com regions.json.
+"""Tests that the region ids in the SVGs stay in sync with regions.json.
 
-Valida os 4 arquivos SVG (male/female × anterior/posterior).
-Se os assets estiverem ausentes, os testes são ignorados.
+Validates all 4 SVG files (male/female × anterior/posterior).
+The tests are skipped when the assets are missing.
 """
 
 import json
@@ -73,10 +73,10 @@ def _view_of(svg_key: str) -> str:
 
 
 def _json_ids_for_view(view: str) -> set[str]:
-    """Ids canônicos cuja lista `views` inclui a vista informada.
+    """Canonical ids whose `views` list includes the given view.
 
-    Regiões agregadoras (ex.: "trunk", com `views: []`) ficam de fora: não
-    têm path próprio em SVG nenhum, só existem para guiar o rollup.
+    Aggregating regions (such as "trunk", with `views: []`) are left out: they
+    have no path of their own in any SVG and exist only to drive the rollup.
     """
     return {r["id"] for r in _load_json_regions() if view in r.get("views", [])}
 
@@ -84,9 +84,9 @@ def _json_ids_for_view(view: str) -> set[str]:
 @unittest.skipUnless(_ASSETS_EXIST, "Assets não encontrados -- pulando testes de sincronia")
 class TestModelSync(unittest.TestCase):
     def _assert_svg_ids_match_json(self, svg_key: str) -> None:
-        """Sincronia POR VISTA: os ids canônicos do SVG devem ser exatamente os
-        ids de regions.json cuja `views` inclui a vista deste SVG. Regiões com
-        `views` vazio (agregadores como "trunk") não entram na comparação."""
+        """PER-VIEW sync: the SVG's canonical ids must be exactly the ids in
+        regions.json whose `views` includes this SVG's view. Regions with an
+        empty `views` (aggregators such as "trunk") are left out."""
         path = _SVG_FILES[svg_key]
         svg_ids = _extract_canonical_ids_from_svg(path)
         view = _view_of(svg_key)
@@ -124,7 +124,7 @@ class TestModelSync(unittest.TestCase):
             )
 
     def _assert_bilateral_have_both_sides(self, svg_key: str) -> None:
-        """Só considera regiões bilaterais cuja `views` inclui a vista deste SVG."""
+        """Only considers bilateral regions whose `views` includes this SVG's view."""
         view = _view_of(svg_key)
         bilateral_ids = {
             item["id"]
@@ -217,8 +217,8 @@ class TestModelSync(unittest.TestCase):
         self._assert_silhouette_present("female_posterior")
 
     def test_aggregator_regions_have_no_path_in_any_svg(self):
-        """Regiões com `views: []` (ex.: "trunk") são só agregadoras: não têm
-        path próprio em SVG nenhum, apenas guiam o rollup de valores."""
+        """Regions with `views: []` (such as "trunk") are aggregators only: they
+        have no path of their own in any SVG, they just drive the value rollup."""
         aggregator_ids = {
             item["id"] for item in _load_json_regions() if not item.get("views")
         }

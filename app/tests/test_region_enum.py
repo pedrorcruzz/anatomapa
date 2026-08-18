@@ -1,4 +1,4 @@
-"""Testes do enum público Region: sincronia com o modelo e uso via heatmap."""
+"""Tests for the public Region enum: model sync and usage through heatmap."""
 
 import re
 import unittest
@@ -8,7 +8,7 @@ from anatomapa import Region
 
 
 class TestRegionEnumSync(unittest.TestCase):
-    """Garante que Region não sai de sincronia com regions.json/list_regions."""
+    """Ensures Region never drifts out of sync with regions.json/list_regions."""
 
     def setUp(self):
         regions = am.list_regions()

@@ -6,20 +6,20 @@ from typing import Protocol, runtime_checkable
 
 @runtime_checkable
 class Scale(Protocol):
-    """Protocolo para estratégias de normalização de valores."""
+    """Protocol for value normalisation strategies."""
 
     def normalize(self, values: list[float]) -> list[float]:
-        """Normaliza valores para o intervalo [0, 1]."""
+        """Normalise values into the [0, 1] range."""
         ...
 
 
 class LinearScale:
-    """Normalização linear min-max."""
+    """Linear min-max normalisation."""
 
     def normalize(self, values: list[float]) -> list[float]:
-        """Mapeia valores para [0, 1] usando escala min-max.
+        """Map values to [0, 1] using a min-max scale.
 
-        Entradas com valores iguais são mapeadas para 0.0.
+        Inputs whose values are all equal map to 0.0.
         """
         if not values:
             return []
@@ -32,12 +32,12 @@ class LinearScale:
 
 
 class LogScale:
-    """Normalização log1p min-max, segura para zeros e negativos."""
+    """log1p min-max normalisation, safe for zeros and negative values."""
 
     def normalize(self, values: list[float]) -> list[float]:
-        """Mapeia valores para [0, 1] usando log1p seguido de escala min-max.
+        """Map values to [0, 1] using log1p followed by a min-max scale.
 
-        Valores negativos são deslocados para que o mínimo mapeie para log1p(0).
+        Negative values are shifted so that the minimum maps to log1p(0).
         """
         if not values:
             return []

@@ -1,9 +1,9 @@
-"""Testes do parâmetro `format` e da saída raster (png/jpg/jpeg).
+"""Tests for the `format` parameter and the raster output (png/jpg/jpeg).
 
-Os formatos raster dependem do extra opcional (`cairosvg`/`Pillow`), que não é
-instalado no CI zero-dep. Para cobrir o caminho de sucesso sem a dependência
-real, injetamos módulos falsos em `sys.modules`; a lógica de despacho da própria
-lib é o que está sob teste, não o cairosvg/Pillow.
+Raster formats depend on the optional extra (`cairosvg`/`Pillow`), which is not
+installed in the zero-dep CI. To cover the success path without the real
+dependency, fake modules are injected into `sys.modules`; what is under test is
+the library's own dispatch logic, not cairosvg/Pillow.
 """
 
 import io
@@ -18,7 +18,7 @@ _ASSETS_EXIST = os.path.exists(os.path.join(_ASSETS_DIR, "body_male_anterior.svg
 
 
 class _FakeImg:
-    """Imagem falsa com a superfície mínima que png_to_jpeg usa."""
+    """Fake image exposing the minimum surface png_to_jpeg uses."""
 
     def __init__(self, size=(4, 4)):
         self.size = size
@@ -123,7 +123,7 @@ class TestRasterWithFakes(unittest.TestCase):
 
 
 class TestRasterMissingDependency(unittest.TestCase):
-    """Sem o extra instalado, os formatos raster erram com dica de instalação."""
+    """Without the extra installed, raster formats fail with an install hint."""
 
     def setUp(self):
         self._saved = {n: sys.modules.get(n) for n in ("cairosvg", "PIL", "PIL.Image")}

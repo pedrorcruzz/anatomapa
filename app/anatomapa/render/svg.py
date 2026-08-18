@@ -23,17 +23,17 @@ _MISSING_NEUTRAL_HEX = "#9aa0a6"
 
 
 def _rgb_to_hex(rgb: tuple[int, int, int]) -> str:
-    """Converte (R, G, B) para string de cor CSS em hexadecimal."""
+    """Convert (R, G, B) into a hexadecimal CSS colour string."""
     return "#{:02x}{:02x}{:02x}".format(*rgb)
 
 
 def _tag(elem: ET.Element) -> str:
-    """Nome da tag sem o prefixo de namespace XML."""
+    """Tag name without the XML namespace prefix."""
     return elem.tag.split("}")[-1] if "}" in elem.tag else elem.tag
 
 
 def _validate_background(background: str) -> None:
-    """Valida o parâmetro background, levantando erro claro se for desconhecido."""
+    """Validate the background parameter, raising a clear error if unknown."""
     if background not in _VALID_BACKGROUNDS:
         raise ValueError(
             f"Fundo inválido: {background!r}. Use um de {list(_VALID_BACKGROUNDS)}."
@@ -41,7 +41,7 @@ def _validate_background(background: str) -> None:
 
 
 def _validate_missing(missing: str) -> None:
-    """Valida o parâmetro missing, levantando erro claro se for desconhecido."""
+    """Validate the missing parameter, raising a clear error if unknown."""
     if missing not in _VALID_MISSING:
         raise ValueError(
             f"Missing inválido: {missing!r}. Use um de {list(_VALID_MISSING)}."
@@ -49,11 +49,11 @@ def _validate_missing(missing: str) -> None:
 
 
 def _missing_fill(missing: str, colormap: ColorMap | None) -> str:
-    """Cor de preenchimento para região (path) sem dado, conforme `missing`.
+    """Fill colour for a region (path) with no data, according to `missing`.
 
-    "neutral" (padrão) usa um cinza discreto, distinto do frio do colormap,
-    para sinalizar "sem dado" sem confundir com "valor baixo". "cold" usa
-    colormap.color_at(0.0) -- o comportamento antigo, quando disponível.
+    "neutral" (default) uses a discreet grey, distinct from the colormap's
+    cold end, so "no data" never reads as "low value". "cold" uses
+    colormap.color_at(0.0), the older behaviour, when available.
     """
     if missing == "cold" and colormap is not None:
         return _rgb_to_hex(colormap.color_at(0.0))
@@ -61,20 +61,20 @@ def _missing_fill(missing: str, colormap: ColorMap | None) -> str:
 
 
 def _background_fill(background: str) -> str | None:
-    """Cor de preenchimento do fundo, ou None quando transparente (sem retângulo)."""
+    """Background fill colour, or None when transparent (no rectangle)."""
     return {"dark": "#0a0a0a", "light": "#ffffff", "transparent": None}[background]
 
 
 def _legend_width(vw: float, legend: bool) -> float:
-    """Largura reservada à legenda (0 quando legend=False)."""
+    """Width reserved for the legend (0 when legend=False)."""
     return vw * _LEGEND_WIDTH_RATIO if legend else 0.0
 
 
 def _legend_ui_colors(background: str) -> tuple[str, str, str, str]:
-    """Cores da UI da legenda adaptadas ao brilho do fundo.
+    """Legend UI colours adapted to the background brightness.
 
-    Retorna (texto principal, texto secundário, borda da barra, stroke dos ticks).
-    Fundo claro usa texto escuro; fundo escuro ou transparente usa texto claro.
+    Returns (primary text, secondary text, bar border, tick stroke). A light
+    background uses dark text; a dark or transparent one uses light text.
     """
     if background == "light":
         return "#1a1a1a", "#4a4a4a", "rgba(0,0,0,0.25)", "rgba(0,0,0,0.45)"
@@ -84,10 +84,10 @@ def _legend_ui_colors(background: str) -> tuple[str, str, str, str]:
 def _append_background_rect(
     root: ET.Element, vx: float, vy: float, total_w: float, vh: float, background: str
 ) -> None:
-    """Insere um <rect> de fundo cobrindo todo o viewBox (corpo + legenda).
+    """Insert a background <rect> covering the whole viewBox (body + legend).
 
-    Nada é inserido quando background="transparent". O retângulo é sempre o
-    primeiro elemento visual (camada mais ao fundo).
+    Nothing is inserted when background="transparent". The rectangle is always
+    the first visual element, the bottom-most layer.
     """
     fill = _background_fill(background)
     if fill is None:
@@ -104,7 +104,7 @@ def _append_background_rect(
 
 
 def _canonical_and_side(elem_id: str) -> tuple[str, str | None]:
-    """Separa o id do path em (id canônico, lado), onde lado é 'left', 'right' ou None."""
+    """Split a path id into (canonical id, side), where side is 'left', 'right' or None."""
     for suffix, side in (("-left", "left"), ("-right", "right")):
         if elem_id.endswith(suffix):
             return elem_id[: -len(suffix)], side
@@ -116,8 +116,9 @@ def _color_for(
     side: str | None,
     colors: dict[str, tuple[int, int, int]],
 ) -> tuple[int, int, int] | None:
-    """Cor de um path: usa a chave lateralizada (ex.: 'hand_left') se existir,
-    senão cai na chave canônica ('hand'). Retorna None se nenhuma tiver valor."""
+    """Colour for a path: prefers the lateralised key (e.g. 'hand_left') when
+    present, otherwise falls back to the canonical one ('hand'). Returns None
+    when neither has a value."""
     if side is not None:
         key = f"{canonical}_{side}"
         if key in colors:
@@ -126,7 +127,7 @@ def _color_for(
 
 
 def _parse_viewbox(svg_string: str) -> tuple[float, float, float, float]:
-    """Extrai min-x, min-y, largura e altura do atributo viewBox do SVG."""
+    """Extract min-x, min-y, width and height from the SVG viewBox attribute."""
     try:
         root = ET.fromstring(svg_string)
     except ET.ParseError:
@@ -144,7 +145,7 @@ def _parse_viewbox(svg_string: str) -> tuple[float, float, float, float]:
 
 
 def _extract_body_outline_d(svg_string: str) -> str | None:
-    """Extrai o atributo d do path com id='body-outline', ou None se ausente."""
+    """Extract the d attribute of the path with id='body-outline', or None if absent."""
     try:
         root = ET.fromstring(svg_string)
     except ET.ParseError:
@@ -156,7 +157,7 @@ def _extract_body_outline_d(svg_string: str) -> str | None:
 
 
 def _compute_ticks(value_min: float, value_max: float, n: int = 5) -> list[float]:
-    """Calcula ~n valores uniformes entre value_min e value_max para os ticks da legenda."""
+    """Compute ~n evenly spaced values between value_min and value_max for the legend ticks."""
     if value_min == value_max:
         return [value_min]
     step = (value_max - value_min) / (n - 1)
@@ -174,12 +175,12 @@ def _append_legend(
     lang: str = "pt",
     background: str = "transparent",
 ) -> None:
-    """Insere barra de gradiente VERTICAL no lado direito da figura.
+    """Insert a VERTICAL gradient bar on the right-hand side of the figure.
 
-    O viewBox do elemento raiz é expandido lateralmente para acomodar a legenda
-    sem sobrepor o corpo. Design: barra vertical com gradiente (topo=máximo,
-    base=mínimo), rótulo acima e ticks numéricos à direita. As cores de texto
-    se adaptam ao brilho do fundo (background).
+    The root element's viewBox is widened sideways so the legend fits without
+    overlapping the body. Design: vertical gradient bar (top=maximum,
+    bottom=minimum), label above and numeric ticks to the right. Text colours
+    adapt to the background brightness.
     """
     # Faixa reservada à direita para a legenda (viewBox expandido)
     legend_w = _legend_width(vw, True)
@@ -301,29 +302,30 @@ def _build_smooth_svg(
     background: str = "transparent",
     missing: str = "neutral",
 ) -> str:
-    """Constrói o SVG do "modelo preservado": degradê térmico com bordas frias
-    e o contorno do corpo sempre nítido por cima.
+    """Build the "preserved model" SVG: a thermal gradient with cold edges and
+    the body outline always crisp on top.
 
-    Estratégia de camadas (de baixo para cima):
-    1. Fundo (opcional): retângulo cobrindo o viewBox inteiro (corpo + legenda).
-    2. Grupo com mask="url(#body-mask)" (máscara sólida = união de todos os
-       paths de região): tudo dentro nunca vaza da silhueta.
-       a. Grupo com filter="url(#thermal-blur)": base fria (cor do t=0 do
-          colormap) + uma cópia por região com a cor do dado, blur leve para
-          continuidade entre regiões vizinhas.
-       b. Camada de inner-glow frio (feFlood + feComposite operator="out" +
-          feGaussianBlur + feComposite operator="in"): brilho azul/frio que
-          gruda só nas bordas internas de cada parte, sem tocar o núcleo.
-    3. Camada NÍTIDA, fora da máscara e do blur: linhas de detalhe finas e
-       semitransparentes + contorno externo forte (fill-rule="evenodd"), para
-       o modelo nunca distorcer com o degradê.
-    4. Legenda (opcional).
+    Layer strategy (bottom to top):
+    1. Background (optional): rectangle covering the whole viewBox (body +
+       legend).
+    2. Group with mask="url(#body-mask)" (solid mask = union of every region
+       path): nothing inside ever bleeds outside the silhouette.
+       a. Group with filter="url(#thermal-blur)": cold base (the colormap's
+          t=0 colour) plus one copy per region carrying the data colour, with
+          a light blur for continuity between neighbouring regions.
+       b. Cold inner-glow layer (feFlood + feComposite operator="out" +
+          feGaussianBlur + feComposite operator="in"): a blue/cold glow that
+          clings only to the inner edges of each part, never the core.
+    3. CRISP layer, outside both the mask and the blur: thin semi-transparent
+       detail lines plus a strong outer contour (fill-rule="evenodd"), so the
+       model never distorts along with the gradient.
+    4. Legend (optional).
 
-    Regiões sem valor não recebem path próprio: a base por baixo (cor de
-    `missing`, cinza neutro por padrão ou fria quando missing="cold") já cobre
-    a área, sem buracos no degradê.
+    Regions with no value get no path of their own: the base underneath (the
+    `missing` colour, neutral grey by default or cold when missing="cold")
+    already covers the area, leaving no holes in the gradient.
 
-    Saída determinística (ordem estável de ids e atributos fixos).
+    Deterministic output (stable id ordering and fixed attributes).
     """
     _validate_background(background)
     _validate_missing(missing)
@@ -477,28 +479,29 @@ def _build_smooth_svg(
 
 
 def _format_value(v: float) -> str:
-    """Formata valor numérico para exibição na legenda."""
+    """Format a numeric value for display in the legend."""
     if v == int(v):
         return str(int(v))
     return f"{v:.2f}"
 
 
 def _format_tick(v: float) -> str:
-    """Formata um valor de tick da legenda.
+    """Format a legend tick value.
 
-    Arredonda sempre ao inteiro mais próximo para produzir rótulos limpos
-    no estilo ggplot. Valores de tick são posições aproximadas de escala,
-    não medições precisas, então a perda de fração é intencional.
+    Always rounds to the nearest integer to produce clean ggplot-style
+    labels. Tick values are approximate scale positions, not precise
+    measurements, so losing the fractional part is intentional.
     """
     return str(round(v))
 
 
 class SvgRenderer:
-    """Aplica um Heatmap sobre um clone do SVG base.
+    """Apply a Heatmap onto a clone of the base SVG.
 
-    Regiões sem valor no heatmap recebem preenchimento conforme `missing`
-    ("neutral", cinza discreto, por padrão; ou "cold", cor fria do colormap).
-    Saída é determinística: ordem estável de atributos e regiões.
+    Regions with no value in the heatmap are filled according to `missing`
+    ("neutral", a discreet grey, by default; or "cold", the colormap's cold
+    colour). Output is deterministic: stable ordering of attributes and
+    regions.
     """
 
     def render(
@@ -513,41 +516,42 @@ class SvgRenderer:
         background: str = "transparent",
         missing: str = "neutral",
     ) -> Figure:
-        """Aplica as cores do heatmap sobre o SVG anatômico.
+        """Apply the heatmap colours onto the anatomical SVG.
 
         Parameters
         ----------
         heatmap:
-            Heatmap com mapeamento region_id -> cores RGB.
+            Heatmap mapping region_id -> RGB colours.
         model:
-            AnatomicalModel com geometria e metadados das regiões.
+            AnatomicalModel with the region geometry and metadata.
         lang:
-            Idioma dos rótulos ("pt" ou "en").
+            Label language ("pt" or "en").
         base_svg:
-            Conteúdo SVG como string. Quando None, reconstrói a partir da geometria do modelo.
+            SVG content as a string. When None, rebuilds from the model
+            geometry.
         smooth:
-            Se True, aplica degradê térmico contínuo com feGaussianBlur.
+            If True, applies a continuous thermal gradient with feGaussianBlur.
         legend:
-            Se True, insere barra de cores com rótulos de intensidade.
+            If True, inserts a colour bar with intensity labels.
         colormap:
-            ColorMap usado para gerar stops da legenda e do modo smooth.
+            ColorMap used to generate the legend and smooth-mode stops.
         background:
-            Fundo da figura: "dark", "light" ou "transparent" (padrão).
+            Figure background: "dark", "light" or "transparent" (default).
         missing:
-            Preenchimento de região sem dado: "neutral" (padrão, cinza
-            discreto que sinaliza "sem dado") ou "cold" (cor fria do
-            colormap, comportamento antigo).
+            Fill for regions with no data: "neutral" (default, a discreet grey
+            that reads as "no data") or "cold" (the colormap's cold colour,
+            the older behaviour).
 
         Returns
         -------
         Figure
-            Figura renderizada encapsulando a string SVG final.
+            Rendered figure wrapping the final SVG string.
 
         Raises
         ------
         ValueError
-            Se background não for "dark", "light" ou "transparent", ou se
-            missing não for "neutral" ou "cold".
+            If background is not "dark", "light" or "transparent", or if
+            missing is not "neutral" or "cold".
         """
         _validate_background(background)
         _validate_missing(missing)
@@ -581,7 +585,7 @@ class SvgRenderer:
         background: str = "transparent",
         missing: str = "neutral",
     ) -> str:
-        """Clona a árvore SVG e aplica as cores de preenchimento do heatmap."""
+        """Clone the SVG tree and apply the heatmap fill colours."""
         _validate_background(background)
         _validate_missing(missing)
         ET.register_namespace("", _SVG_NS)
@@ -642,7 +646,7 @@ class SvgRenderer:
         background: str = "transparent",
         missing: str = "neutral",
     ) -> str:
-        """Constrói o SVG do zero a partir da geometria do modelo quando não há SVG base."""
+        """Build the SVG from scratch out of the model geometry when there is no base SVG."""
         _validate_background(background)
         _validate_missing(missing)
         ET.register_namespace("", _SVG_NS)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import difflib
+from collections.abc import Mapping
 
 from anatomapa.domain.model import AnatomicalModel
 
@@ -57,7 +58,7 @@ class _Lookup:
 def _resolve_one(
     label: str,
     lookup: _Lookup,
-    region_map: dict[str, str],
+    region_map: Mapping[str, str],
 ) -> tuple[str | None, str | None]:
     """Resolve a single label. Returns (region_key, failure_reason).
 
@@ -94,7 +95,7 @@ def _format_errors(unresolved: dict[str, dict]) -> str:
 def analyze(
     labels: list[str],
     model: AnatomicalModel,
-    region_map: dict[str, str] | None = None,
+    region_map: Mapping[str, str] | None = None,
 ) -> dict[str, dict]:
     """Analyse labels WITHOUT raising (dry run). Backs resolve() and validate().
 
@@ -128,7 +129,7 @@ def analyze(
 def resolve(
     labels: list[str],
     model: AnatomicalModel,
-    region_map: dict[str, str] | None = None,
+    region_map: Mapping[str, str] | None = None,
     strict: bool = True,
 ) -> dict[str, str]:
     """Resolves labels to region ids (canonical or lateralized).

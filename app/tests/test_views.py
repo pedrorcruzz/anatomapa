@@ -1,6 +1,8 @@
 """Tests for the view parameter: anterior, posterior and both."""
+import inspect
 import os
 import re
+import typing
 import unittest
 import xml.etree.ElementTree as ET
 
@@ -157,6 +159,31 @@ class TestSplitParameter(unittest.TestCase):
             am.heatmap({"hand": 5}, view="anterior", split=True)
         with self.assertRaises(ValueError):
             am.heatmap({"hand": 5}, view="posterior", split=True)
+
+
+@unittest.skipUnless(
+    hasattr(typing, "get_overloads"), "typing.get_overloads exige Python 3.11+"
+)
+class TestHeatmapOverloads(unittest.TestCase):
+    """Tests for the typed overloads that make the return type of heatmap precise."""
+
+    def test_declares_the_three_overloads(self):
+        overloads = typing.get_overloads(am.heatmap)
+        self.assertEqual(len(overloads), 3)
+
+    def test_each_overload_accepts_the_full_signature(self):
+        params = list(inspect.signature(am.heatmap).parameters)
+        for over in typing.get_overloads(am.heatmap):
+            self.assertEqual(list(inspect.signature(over).parameters), params)
+
+    def test_split_literal_drives_the_return_type(self):
+        hints = [
+            typing.get_type_hints(over)
+            for over in typing.get_overloads(am.heatmap)
+        ]
+        by_split = {str(h["split"]): str(h["return"]) for h in hints}
+        self.assertIn("Figure]", by_split["typing.Literal[True]"])
+        self.assertNotIn("tuple", by_split["typing.Literal[False]"])
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")

@@ -1,4 +1,4 @@
-"""anatomapa - Biblioteca Python para geração de mapas de calor anatômicos da superfície corporal."""
+"""anatomapa - Python library to generate anatomical heatmaps of the human body surface."""
 
 from __future__ import annotations
 
@@ -12,12 +12,13 @@ from anatomapa.readers.csv_reader import from_csv
 from anatomapa.readers.json_reader import from_json
 from anatomapa.readers.native import from_dict, from_records
 from anatomapa.readers.xlsx_reader import from_xlsx
+from anatomapa.regions import Region
 from anatomapa.render.base import Figure
 from anatomapa.render.svg import SvgRenderer
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 __all__ = [
     "heatmap",
     "validate",
@@ -28,12 +29,15 @@ __all__ = [
     "from_xlsx",
     "list_regions",
     "resolve",
+    "Region",
     "Figure",
     "Heatmap",
     "ResolutionError",
 ]
 
 _VALID_ON_UNKNOWN = ("error", "skip", "warn")
+_VALID_FORMATS = ("svg", "png", "jpg", "jpeg")
+_VIEW = "anterior"
 
 
 def _as_dict(values) -> dict:
@@ -47,80 +51,69 @@ _renderer = SvgRenderer()
 
 def heatmap(
     values,
-    view: str = "anterior",
     body: str = "male",
-    cmap: str = "reds",
-    scale: str = "linear",
     lang: str = "pt",
+    format: str = "svg",
     title: str | None = None,
-    smooth: bool = False,
-    legend: bool = False,
     background: str = "transparent",
-    missing: str = "neutral",
     on_unknown: str = "error",
     region_map: dict[str, str] | None = None,
-    assets_dir: str | None = None,
 ) -> Figure:
-    """Gera uma figura de mapa de calor anatômico.
+    """Generate an anatomical heatmap figure.
 
     Parameters
     ----------
     values:
-        Mapeamento rótulo de região -> valor. Aceita nomes em PT ou EN, com acento,
-        plural e lado ("mão direita", "left hand"). Também aceita um iterável de pares
-        (região, valor), como o que os leitores from_csv/from_json/from_records devolvem.
-    view:
-        Vista do corpo a renderizar: "anterior" (frente) ou "posterior" (costas).
+        Mapping of region label -> value. Labels may be given in Portuguese or
+        English, with accents, plural forms and side ("mão direita", "left hand").
+        An iterable of (region, value) pairs is also accepted, such as the output
+        of the from_csv/from_json/from_records readers.
     body:
-        Tipo de corpo: "male" (masculino) ou "female" (feminino).
-    cmap:
-        Nome do colormap: "reds", "heat", "viridis", "blues", "greens", "thermal".
-    scale:
-        Estratégia de escala: "linear" ou "log".
+        Body type: "male" or "female".
     lang:
-        Idioma dos rótulos de região na figura: "pt" ou "en".
+        Language of the region labels drawn on the figure: "pt" or "en".
+    format:
+        Output format: "svg" (default), "png", "jpg" or "jpeg". PNG and JPEG are
+        rasterised when the figure is saved and require the optional "raster"
+        extra (pip install anatomapa[raster]).
     title:
-        Título opcional a embutir no SVG e na legenda.
-    smooth:
-        Se True, aplica degradê térmico contínuo com feGaussianBlur em vez de cores chapadas.
-    legend:
-        Se True, insere barra de cores com rótulos de intensidade (mínimo e máximo) na figura.
+        Optional title embedded in the SVG and in the legend.
     background:
-        Fundo da figura: "dark" (escuro), "light" (claro) ou "transparent" (padrão, sem
-        retângulo de fundo). As cores de texto da legenda se adaptam ao fundo escolhido.
-    missing:
-        Preenchimento de região sem dado: "neutral" (padrão, cinza discreto que
-        sinaliza "sem dado", distinto de um valor baixo) ou "cold" (cor fria do
-        colormap em t=0.0, comportamento antigo do modo smooth).
+        Figure background: "dark", "light" or "transparent" (default, no background
+        rectangle). Legend text colors adapt to the chosen background.
     on_unknown:
-        Política para rótulos não reconhecidos: "error" (padrão, levanta
-        ResolutionError listando todos), "skip" (ignora em silêncio) ou "warn"
-        (ignora emitindo um aviso).
+        Policy for unrecognised labels: "error" (default, raises ResolutionError
+        listing them all), "skip" (silently ignores) or "warn" (ignores with a
+        warning).
     region_map:
-        De-para do usuário: rótulo próprio -> id de região. Aceita ids canônicos
-        ("hand") e lateralizados ("hand_left", "hand_right").
-    assets_dir:
-        Substitui o caminho do diretório de assets (arquivos SVG + regions.json).
+        User mapping: custom label -> region id. Accepts canonical ids ("hand")
+        and lateralised ids ("hand_left", "hand_right").
 
     Returns
     -------
     Figure
-        Objeto Figure com suporte a .save(), .to_svg() e str().
+        A Figure object supporting .save(), .to_svg() and str().
 
     Raises
     ------
     ResolutionError
-        Se algum rótulo em values não puder ser resolvido para um id de região conhecido.
+        If a label in values cannot be resolved to a known region id.
     ValueError
-        Se os nomes de view, body, cmap, scale, background ou missing forem desconhecidos.
+        If body, format or background is unknown.
     """
     if on_unknown not in _VALID_ON_UNKNOWN:
         raise ValueError(
             f"on_unknown inválido: {on_unknown!r}. Use um de {list(_VALID_ON_UNKNOWN)}."
         )
 
+    fmt = format.lower()
+    if fmt not in _VALID_FORMATS:
+        raise ValueError(
+            f"format inválido: {format!r}. Use um de {list(_VALID_FORMATS)}."
+        )
+
     values = _as_dict(values)
-    model = _loader.load(view, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
 
     label_list = list(values.keys())
     resolved = resolve(label_list, model, region_map, strict=(on_unknown == "error"))
@@ -140,8 +133,8 @@ def heatmap(
         if region_key is not None:
             canonical_values[region_key] = float(val)
 
-    colormap = get_colormap(cmap)
-    scale_obj = get_scale(scale)
+    colormap = get_colormap("thermal")
+    scale_obj = get_scale("linear")
 
     heat = _build_heatmap(
         values=canonical_values,
@@ -152,84 +145,75 @@ def heatmap(
         title=title,
     )
 
-    # Carrega o SVG base para o modo onto-svg (smooth ou não)
-    base = assets_dir or _loader._ASSETS_DIR
-    svg_path = os.path.join(base, f"body_{body}_{view}.svg")
+    # Carrega o SVG base para o modo onto-svg
+    base = _loader._ASSETS_DIR
+    svg_path = os.path.join(base, f"body_{body}_{_VIEW}.svg")
     with open(svg_path, encoding="utf-8") as fh:
         base_svg = fh.read()
 
-    return _renderer.render(
+    figure = _renderer.render(
         heat,
         model,
         lang=lang,
         base_svg=base_svg,
-        smooth=smooth,
-        legend=legend,
+        smooth=True,
+        legend=True,
         colormap=colormap,
         background=background,
-        missing=missing,
+        missing="neutral",
     )
+    return Figure(figure.to_svg(), format=fmt)
 
 
 def validate(
     values,
-    view: str = "anterior",
     body: str = "male",
     region_map: dict[str, str] | None = None,
-    assets_dir: str | None = None,
 ) -> dict[str, dict]:
-    """Confere (dry-run) quais rótulos seriam reconhecidos, SEM renderizar.
+    """Dry-run check of which labels would be recognised, WITHOUT rendering.
 
-    Útil para validar uma planilha antes de gerar o mapa: mostra o que cada
-    rótulo vira e quais não foram reconhecidos (com sugestões).
+    Useful to validate a spreadsheet before generating the map: shows what each
+    label maps to and which ones were not recognised (with suggestions).
 
     Parameters
     ----------
     values:
-        dict {rótulo: valor} ou iterável de pares (região, valor); os valores
-        são ignorados aqui, importa apenas as chaves/rótulos.
-    view, body:
-        Vista e corpo usados para carregar as regiões válidas.
+        dict {label: value} or iterable of (region, value) pairs; the values are
+        ignored here, only the keys/labels matter.
+    body:
+        Body type used to load the valid regions.
     region_map:
-        De-para do usuário (mesmo formato do heatmap).
-    assets_dir:
-        Substitui o diretório de assets.
+        User mapping (same format as heatmap).
 
     Returns
     -------
     dict
-        {"resolved": {rótulo: region_key}, "unresolved": {rótulo: {"reason", "suggestions"}}}.
+        {"resolved": {label: region_key}, "unresolved": {label: {"reason", "suggestions"}}}.
     """
     values = _as_dict(values)
-    model = _loader.load(view, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
     return analyze(list(values.keys()), model, region_map)
 
 
 def list_regions(
-    view: str = "anterior",
     lang: str = "pt",
     body: str = "male",
-    assets_dir: str | None = None,
 ) -> list[dict[str, str | bool | None]]:
-    """Lista todas as regiões anatômicas para a vista informada.
+    """List all anatomical regions for the front (anterior) view.
 
     Parameters
     ----------
-    view:
-        Vista do corpo: "anterior" ou "posterior".
     lang:
-        Idioma do campo label: "pt" ou "en".
+        Language of the label field: "pt" or "en".
     body:
-        Tipo de corpo: "male" ou "female".
-    assets_dir:
-        Substitui o caminho do diretório de assets.
+        Body type: "male" or "female".
 
     Returns
     -------
     list[dict]
-        Lista ordenada de dicts com as chaves: id, label, bilateral, parent.
+        Ordered list of dicts with keys: id, label, bilateral, parent.
     """
-    model = _loader.load(view, assets_dir, body)
+    model = _loader.load(_VIEW, None, body)
     result = []
     for region in model.regions():
         label = region.label_pt if lang == "pt" else region.label_en

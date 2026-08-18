@@ -290,6 +290,15 @@ class TestSvgRendererOntoSvg(unittest.TestCase):
         paths = {e.get("id"): e for e in root.iter() if _tag(e) == "path"}
         self.assertEqual(paths["head"].get("fill"), "#0000ff")
 
+    def test_title_injected_into_base_svg(self):
+        base = _minimal_base_svg("head")
+        hm = _make_heatmap({"head": (0, 0, 255)}, title="Meu Mapa")
+        svg = str(self.renderer.render(hm, self.model, base_svg=base))
+        root = ET.fromstring(svg)
+        titles = [e for e in root.iter() if _tag(e) == "title"]
+        self.assertEqual(len(titles), 1)
+        self.assertEqual(titles[0].text, "Meu Mapa")
+
     def test_unknown_region_gets_placeholder(self):
         base = _minimal_base_svg("unknown_region")
         hm = _make_heatmap({"head": (0, 0, 255)})

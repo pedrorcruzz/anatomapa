@@ -18,7 +18,7 @@ _IRREGULAR_PLURALS = {
 
 
 class ResolutionError(ValueError):
-    """Lançado quando um ou mais rótulos não podem ser resolvidos para ids de região."""
+    """Raised when one or more labels cannot be resolved to region ids."""
 
 
 def _plural_variants(slug: str) -> list[str]:
@@ -171,37 +171,37 @@ def resolve(
     region_map: dict[str, str] | None = None,
     strict: bool = True,
 ) -> dict[str, str]:
-    """Resolve rótulos para ids de região (canônicos ou lateralizados).
+    """Resolves labels to region ids (canonical or lateralized).
 
-    Cascata por rótulo:
-    1. region_map do usuário (precedência), por correspondência exata ou por slug.
-    2. Match direto: id canônico, slug (sem acento/caixa), alias ou plural.
-    3. Match com lado: "mão direita"/"right hand" -> "hand_right"; um lado numa
-       região central (cabeça, tronco) é erro.
-    4. Não resolvido: acumula para erro em lote com sugestões (difflib).
+    Cascade per label:
+    1. User's region_map (takes precedence), by exact match or by slug.
+    2. Direct match: canonical id, slug (no accents/case), alias, or plural.
+    3. Match with side: "mão direita"/"right hand" -> "hand_right"; a side on
+       a central region (head, torso) is an error.
+    4. Unresolved: accumulated into a batch error with suggestions (difflib).
 
     Parameters
     ----------
     labels:
-        Rótulos de entrada (PT ou EN, com acento, plural, com lado, etc.).
+        Input labels (PT or EN, with accents, plural, with side, etc.).
     model:
-        AnatomicalModel que fornece ids, aliases e a marca de bilateral.
+        AnatomicalModel that provides ids, aliases, and the bilateral flag.
     region_map:
-        De-para do usuário: rótulo próprio -> id de região
-        (ex.: {"right_hand": "hand_right"}).
+        User-provided mapping: custom label -> region id
+        (e.g., {"right_hand": "hand_right"}).
     strict:
-        Se True (padrão), levanta ResolutionError listando todos os rótulos
-        não resolvidos. Se False, apenas omite os não resolvidos do resultado.
+        If True (default), raises ResolutionError listing all unresolved
+        labels. If False, unresolved labels are simply omitted from the result.
 
     Returns
     -------
     dict[str, str]
-        Mapeamento do rótulo original para o id de região resolvido.
+        Mapping from the original label to the resolved region id.
 
     Raises
     ------
     ResolutionError
-        Em modo estrito, quando algum rótulo não pôde ser resolvido.
+        In strict mode, when any label could not be resolved.
     """
     report = analyze(labels, model, region_map)
     if report["unresolved"] and strict:

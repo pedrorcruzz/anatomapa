@@ -32,3 +32,6 @@ docs/
 template/
 app/tools/*
 !app/tools/coverage_check.py
+
+TODO.md
+

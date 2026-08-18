@@ -10,27 +10,27 @@ def from_json(
     value_key: str = "value",
     encoding: str = "utf-8",
 ) -> list[tuple[str, float]]:
-    """Parseia um arquivo ou string JSON em pares (rótulo, valor).
+    """Parses a JSON file or string into (label, value) pairs.
 
-    Aceita dois formatos:
-    - Objeto: {"region_id": valor, ...}
+    Accepts two formats:
+    - Object: {"region_id": value, ...}
     - Array: [{"region": "...", "value": ...}, ...]
 
     Parameters
     ----------
     source:
-        Caminho do arquivo, string JSON ou objeto de texto tipo arquivo.
+        File path, JSON string, or a text file-like object.
     region_key:
-        Chave do rótulo da região no formato array de objetos.
+        Key for the region label in the array-of-objects format.
     value_key:
-        Chave do valor numérico no formato array de objetos.
+        Key for the numeric value in the array-of-objects format.
     encoding:
-        Codificação quando source é um caminho de arquivo.
+        Encoding used when source is a file path.
 
     Returns
     -------
     list[tuple[str, float]]
-        Lista de pares (rótulo, valor).
+        List of (label, value) pairs.
     """
     if isinstance(source, str):
         stripped = source.strip()

@@ -194,7 +194,7 @@ class TestBackgroundFacade(unittest.TestCase):
     def test_light_background_smooth_mode(self):
         import anatomapa
         svg = str(anatomapa.heatmap(
-            {"head": 10, "trunk": 50}, smooth=True, cmap="thermal", background="light",
+            {"head": 10, "trunk": 50}, background="light",
         ))
         root = ET.fromstring(svg)
         bg = next((e for e in root if e.get("id") == "figure-background"), None)
@@ -216,8 +216,8 @@ class TestBackgroundFacade(unittest.TestCase):
     def test_background_and_legend_combined_valid_xml(self):
         import anatomapa
         svg = str(anatomapa.heatmap(
-            {"head": 10, "trunk": 50}, smooth=True, cmap="thermal",
-            background="dark", legend=True,
+            {"head": 10, "trunk": 50},
+            background="dark",
         ))
         try:
             ET.fromstring(svg)
@@ -233,7 +233,7 @@ class TestSmoothMode(unittest.TestCase):
         import anatomapa
         if values is None:
             values = {"head": 100, "trunk": 50, "arm": 80}
-        return str(anatomapa.heatmap(values, body=body, smooth=True, **kwargs))
+        return str(anatomapa.heatmap(values, body=body, **kwargs))
 
     def test_smooth_svg_is_valid_xml(self):
         svg = self._smooth_svg()
@@ -266,8 +266,8 @@ class TestSmoothMode(unittest.TestCase):
     def test_smooth_is_deterministic(self):
         values = {"head": 100, "trunk": 50, "arm": 80}
         import anatomapa
-        svg1 = str(anatomapa.heatmap(values, smooth=True))
-        svg2 = str(anatomapa.heatmap(values, smooth=True))
+        svg1 = str(anatomapa.heatmap(values))
+        svg2 = str(anatomapa.heatmap(values))
         self.assertEqual(svg1, svg2)
 
     def test_smooth_has_sharp_outline_layer(self):
@@ -291,38 +291,17 @@ class TestSmoothMode(unittest.TestCase):
             self.fail(f"SVG smooth female inválido: {e}")
 
     def test_smooth_with_thermal_cmap(self):
-        svg = self._smooth_svg(cmap="thermal")
+        svg = self._smooth_svg()
         self.assertIn("feGaussianBlur", svg)
 
     def test_smooth_with_title(self):
         svg = self._smooth_svg(title="Teste Smooth")
         self.assertIn("Teste Smooth", svg)
 
-    def test_smooth_false_does_not_add_blur(self):
-        import anatomapa
-        svg = str(anatomapa.heatmap({"head": 10}, smooth=False))
-        self.assertNotIn("feGaussianBlur", svg)
-
-    def test_smooth_base_cold_present(self):
-        # A base fria (união de todos os paths de região, sem id próprio) deve
-        # estar presente como camada de fundo do degradê quando missing="cold"
-        # (comportamento antigo, sem cor de missing neutra).
-        from anatomapa.color.registry import get_colormap
-        cmap = get_colormap("thermal")
-        cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
-        svg = self._smooth_svg(cmap="thermal", missing="cold")
-        root = ET.fromstring(svg)
-        bases = [
-            e
-            for e in root.iter()
-            if _tag(e) in ("rect", "path") and e.get("fill") == cold_hex
-        ]
-        self.assertGreaterEqual(len(bases), 1, "Base fria ausente no grupo blurred")
-
     def test_smooth_base_neutral_by_default(self):
         # Por padrão (missing="neutral"), a base do degradê usa o cinza
         # discreto de missing, não a cor fria do colormap.
-        svg = self._smooth_svg(cmap="thermal")
+        svg = self._smooth_svg()
         root = ET.fromstring(svg)
         bases = [
             e
@@ -337,7 +316,7 @@ class TestSmoothMode(unittest.TestCase):
         # a área, sem deixar buraco no degradê.
         import anatomapa
         # Passa apenas head; trunk e outros nao tem valor
-        svg = str(anatomapa.heatmap({"head": 100}, body="male", smooth=True, cmap="thermal"))
+        svg = str(anatomapa.heatmap({"head": 100}, body="male"))
         root = ET.fromstring(svg)
         blurred_group = None
         for e in root.iter():
@@ -356,7 +335,7 @@ class TestSmoothMode(unittest.TestCase):
         cmap = get_colormap("thermal")
         cold_hex = "#{:02x}{:02x}{:02x}".format(*cmap.color_at(0.0))
         svg = str(anatomapa.heatmap(
-            {"head": 100, "trunk": 1}, body="male", smooth=True, cmap="thermal",
+            {"head": 100, "trunk": 1}, body="male",
         ))
         root = ET.fromstring(svg)
         blurred_group = None
@@ -395,7 +374,7 @@ class TestSmoothMode(unittest.TestCase):
         import anatomapa
         svg = str(anatomapa.heatmap(
             {"head": 100, "trunk": 50, "arm": 80},
-            body="male", smooth=True, legend=True, cmap="thermal",
+            body="male",
         ))
         try:
             ET.fromstring(svg)
@@ -477,7 +456,7 @@ class TestLegend(unittest.TestCase):
         import anatomapa
         if values is None:
             values = {"head": 100, "trunk": 10}
-        return str(anatomapa.heatmap(values, legend=True, **kwargs))
+        return str(anatomapa.heatmap(values, **kwargs))
 
     def test_legend_contains_linear_gradient(self):
         svg = self._legend_svg()
@@ -525,12 +504,12 @@ class TestLegend(unittest.TestCase):
 
     def test_legend_contains_min_value(self):
         import anatomapa
-        svg = str(anatomapa.heatmap({"head": 100, "trunk": 10}, legend=True))
+        svg = str(anatomapa.heatmap({"head": 100, "trunk": 10}))
         self.assertIn("10", svg)
 
     def test_legend_contains_max_value(self):
         import anatomapa
-        svg = str(anatomapa.heatmap({"head": 100, "trunk": 10}, legend=True))
+        svg = str(anatomapa.heatmap({"head": 100, "trunk": 10}))
         self.assertIn("100", svg)
 
     def test_legend_contains_large_tick_value(self):
@@ -541,7 +520,7 @@ class TestLegend(unittest.TestCase):
             "finger": 8684, "trunk": 2602, "thigh": 1733, "leg": 1984,
             "foot": 13666, "toe": 6547,
         }
-        svg = str(anatomapa.heatmap(values, legend=True, cmap="thermal", scale="log"))
+        svg = str(anatomapa.heatmap(values))
         self.assertIn("13666", svg)
 
     def test_legend_has_tick_lines(self):
@@ -574,11 +553,6 @@ class TestLegend(unittest.TestCase):
         svg = self._legend_svg(title="Meu Título")
         self.assertIn("Meu Título", svg)
 
-    def test_legend_false_no_gradient(self):
-        import anatomapa
-        svg = str(anatomapa.heatmap({"head": 10}, legend=False))
-        self.assertNotIn("linearGradient", svg)
-
     def test_legend_gradient_has_stops(self):
         svg = self._legend_svg()
         root = ET.fromstring(svg)
@@ -586,7 +560,7 @@ class TestLegend(unittest.TestCase):
         self.assertGreater(len(stops), 0)
 
     def test_legend_smooth_combined(self):
-        svg = self._legend_svg(smooth=True, cmap="thermal")
+        svg = self._legend_svg()
         try:
             ET.fromstring(svg)
         except ET.ParseError as e:
@@ -597,12 +571,12 @@ class TestLegend(unittest.TestCase):
     def test_legend_smooth_combined_deterministic(self):
         import anatomapa
         values = {"head": 100, "trunk": 10}
-        svg1 = str(anatomapa.heatmap(values, smooth=True, legend=True, cmap="thermal"))
-        svg2 = str(anatomapa.heatmap(values, smooth=True, legend=True, cmap="thermal"))
+        svg1 = str(anatomapa.heatmap(values))
+        svg2 = str(anatomapa.heatmap(values))
         self.assertEqual(svg1, svg2)
 
     def test_legend_thermal_cmap(self):
-        svg = self._legend_svg(cmap="thermal")
+        svg = self._legend_svg()
         self.assertIn("linearGradient", svg)
 
     def test_legend_female_body(self):
@@ -641,7 +615,7 @@ class TestLegend(unittest.TestCase):
             base_svg = fh.read()
         _, _, orig_w, _ = _parse_viewbox(base_svg)
 
-        svg = self._legend_svg(smooth=True, cmap="thermal")
+        svg = self._legend_svg()
         root = ET.fromstring(svg)
         vb = root.get("viewBox", "")
         parts = vb.split()

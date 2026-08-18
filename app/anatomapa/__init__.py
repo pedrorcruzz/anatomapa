@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import os
 import warnings
+from collections.abc import Mapping
 from dataclasses import replace
 from typing import Literal, overload
 
@@ -20,7 +21,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.5"
+__version__ = "0.3.6"
 __all__ = [
     "heatmap",
     "validate",
@@ -67,7 +68,7 @@ def heatmap(
     title: str | None = ...,
     background: str = ...,
     on_unknown: str = ...,
-    region_map: dict[str, str] | None = ...,
+    region_map: Mapping[str, str] | None = ...,
     split: Literal[False] = False,
 ) -> Figure: ...
 
@@ -82,7 +83,7 @@ def heatmap(
     title: str | None = ...,
     background: str = ...,
     on_unknown: str = ...,
-    region_map: dict[str, str] | None = ...,
+    region_map: Mapping[str, str] | None = ...,
     split: Literal[True] = ...,
 ) -> tuple[Figure, Figure]: ...
 
@@ -98,7 +99,7 @@ def heatmap(
     title: str | None = ...,
     background: str = ...,
     on_unknown: str = ...,
-    region_map: dict[str, str] | None = ...,
+    region_map: Mapping[str, str] | None = ...,
     split: bool = ...,
 ) -> Figure | tuple[Figure, Figure]: ...
 
@@ -112,7 +113,7 @@ def heatmap(
     title: str | None = None,
     background: str = "transparent",
     on_unknown: str = "error",
-    region_map: dict[str, str] | None = None,
+    region_map: Mapping[str, str] | None = None,
     split: bool = False,
 ) -> Figure | tuple[Figure, Figure]:
     """Generate an anatomical heatmap figure.
@@ -322,7 +323,7 @@ def heatmap(
 def validate(
     values,
     body: str = "male",
-    region_map: dict[str, str] | None = None,
+    region_map: Mapping[str, str] | None = None,
 ) -> dict[str, dict]:
     """Dry-run check of which labels would be recognised, WITHOUT rendering.
 

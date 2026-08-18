@@ -18,7 +18,7 @@ from anatomapa.render.svg import SvgRenderer
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.1.1"
+__version__ = "0.2.0"
 __all__ = [
     "heatmap",
     "validate",

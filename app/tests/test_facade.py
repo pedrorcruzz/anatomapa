@@ -110,6 +110,71 @@ class TestRegionMapAcceptsEnumValues(unittest.TestCase):
         self.assertEqual(report["resolved"]["MÃO"], "hand")
 
 
+class TestLiteralAliases(unittest.TestCase):
+    """Tests that the Literal aliases match what the lib validates at runtime."""
+
+    def test_view_alias_matches_runtime_validation(self):
+        import typing
+        import anatomapa
+        self.assertEqual(
+            set(typing.get_args(anatomapa.View)), set(anatomapa._VALID_VIEWS)
+        )
+
+    def test_format_alias_matches_runtime_validation(self):
+        import typing
+        import anatomapa
+        self.assertEqual(
+            set(typing.get_args(anatomapa.Format)), set(anatomapa._VALID_FORMATS)
+        )
+
+    def test_on_unknown_alias_matches_runtime_validation(self):
+        import typing
+        import anatomapa
+        self.assertEqual(
+            set(typing.get_args(anatomapa.OnUnknown)),
+            set(anatomapa._VALID_ON_UNKNOWN),
+        )
+
+    def test_body_alias_matches_the_loader(self):
+        import typing
+        import anatomapa
+        from anatomapa.model import loader
+        self.assertEqual(
+            set(typing.get_args(anatomapa.Body)), set(loader._VALID_BODIES)
+        )
+
+    def test_background_alias_matches_the_renderer(self):
+        import typing
+        import anatomapa
+        from anatomapa.render import svg
+        self.assertEqual(
+            set(typing.get_args(anatomapa.Background)), set(svg._VALID_BACKGROUNDS)
+        )
+
+    @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+    def test_lang_alias_matches_the_labels_in_the_asset(self):
+        import json
+        import typing
+        import anatomapa
+        with open(
+            os.path.join(_ASSETS_DIR, "regions.json"), encoding="utf-8"
+        ) as handle:
+            regions = json.load(handle)["regions"]
+        # Cada idioma existe como um campo label_<lang> nos metadados
+        idiomas = {
+            key[len("label_"):]
+            for key in regions[0]
+            if key.startswith("label_")
+        }
+        self.assertEqual(set(typing.get_args(anatomapa.Lang)), idiomas)
+
+    def test_every_alias_is_exported(self):
+        import anatomapa
+        for name in ("View", "Body", "Lang", "Format", "Background", "OnUnknown"):
+            self.assertIn(name, anatomapa.__all__)
+            self.assertTrue(hasattr(anatomapa, name))
+
+
 class TestTypedMarker(unittest.TestCase):
     """Tests for the PEP 561 marker, without which type checkers ignore the lib."""
 

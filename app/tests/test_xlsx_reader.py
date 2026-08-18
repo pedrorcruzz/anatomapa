@@ -1,7 +1,7 @@
-"""Testes do reader XLSX sem dependências externas.
+"""Tests for the XLSX reader with no external dependencies.
 
-O helper build_xlsx_bytes() monta um arquivo .xlsx mínimo e válido em memória
-usando apenas zipfile e strings XML, espelhando o formato Open XML (OOXML).
+The build_xlsx_bytes() helper assembles a minimal, valid .xlsx file in memory
+using only zipfile and XML strings, mirroring the Open XML (OOXML) format.
 """
 
 import io
@@ -73,7 +73,7 @@ _WORKBOOK_RELS = """\
 
 
 def _shared_strings_xml(strings: list[str]) -> str:
-    """Gera o XML da tabela de strings compartilhadas."""
+    """Generate the XML for the shared strings table."""
     items = "".join(f"<si><t>{s}</t></si>" for s in strings)
     return (
         '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
@@ -84,14 +84,14 @@ def _shared_strings_xml(strings: list[str]) -> str:
 
 
 def _worksheet_xml(rows: list[list[tuple[str, str]]]) -> str:
-    """Gera o XML de uma planilha a partir de linhas de células.
+    """Generate the XML of a worksheet from rows of cells.
 
     Parameters
     ----------
     rows:
-        Lista de linhas; cada linha é uma lista de tuplas (ref, valor) onde
-        ref é a referência Excel ("A1") e valor é o texto XML da célula,
-        incluindo o atributo t= quando aplicável.
+        List of rows; each row is a list of (ref, value) tuples where ref is
+        the Excel reference ("A1") and value is the cell's XML text, including
+        the t= attribute when applicable.
     """
     row_elems = []
     for r_idx, cells in enumerate(rows, start=1):
@@ -114,23 +114,23 @@ def build_xlsx_bytes(
     sheet2_rows: list[list[tuple[str, str, str]]] | None = None,
     shared_strings: list[str] | None = None,
 ) -> bytes:
-    """Constrói um arquivo .xlsx mínimo e válido em memória.
+    """Build a minimal, valid .xlsx file in memory.
 
     Parameters
     ----------
     sheet1_rows:
-        Linhas da aba "Dados". Cada célula é (ref, valor, attrs).
-        Para string: attrs='t="s"', valor=índice na tabela de strings.
-        Para número: attrs='', valor=número em string.
+        Rows of the "Dados" sheet. Each cell is (ref, value, attrs).
+        For a string: attrs='t="s"', value=index into the shared strings table.
+        For a number: attrs='', value=the number as a string.
     sheet2_rows:
-        Linhas da aba "Extra" (opcional; padrão vazio).
+        Rows of the "Extra" sheet (optional; empty by default).
     shared_strings:
-        Tabela de strings compartilhadas (padrão vazia).
+        Shared strings table (empty by default).
 
     Returns
     -------
     bytes
-        Conteúdo binário do arquivo .xlsx.
+        Binary content of the .xlsx file.
     """
     if shared_strings is None:
         shared_strings = []
@@ -252,6 +252,19 @@ class TestResolveColIndex(unittest.TestCase):
         # String com espaços não é letra de coluna nem pode ser resolvida sem cabeçalho
         with self.assertRaises(ValueError):
             _resolve_col_index("nome invalido", None)
+
+    def test_three_letters_still_a_column_letter(self):
+        # "XFD" é a última coluna real do Excel e continua válida como letra
+        self.assertEqual(_resolve_col_index("AAA", None), 702)
+
+    def test_long_name_is_not_a_column_letter(self):
+        # Só letras, mas comprido demais para ser coluna: é nome de cabeçalho
+        with self.assertRaises(ValueError):
+            _resolve_col_index("naoexiste", ["regiao", "total"])
+
+    def test_long_name_without_header_raises(self):
+        with self.assertRaises(ValueError):
+            _resolve_col_index("naoexiste", None)
 
 
 # ---------------------------------------------------------------------------
@@ -462,7 +475,7 @@ class TestFromXlsxAggregateSum(unittest.TestCase):
 
 class TestFromXlsxErrors(unittest.TestCase):
     def _make_xlsx_with_bad_value(self) -> bytes:
-        """Planilha com valor não numérico na coluna de valor."""
+        """Sheet holding a non-numeric value in the value column."""
         strings = ["região", "valor", "head", "nao_numero"]
         rows = [
             [("A1", "0", 't="s"'), ("B1", "1", 't="s"')],
@@ -486,6 +499,43 @@ class TestFromXlsxErrors(unittest.TestCase):
         )
         with self.assertRaises(ValueError):
             from_xlsx(xlsx, region_col="coluna_fantasma")
+
+    def test_nonexistent_column_name_without_separators(self):
+        # Nome só de letras não pode ser lido como letra de coluna: viraria um
+        # índice gigante e estouraria a memória em vez de acusar o erro
+        xlsx = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            shared_strings=_STRINGS,
+        )
+        with self.assertRaises(ValueError) as ctx:
+            from_xlsx(xlsx, region_col="naoexiste", value_col=1)
+        self.assertIn("naoexiste", str(ctx.exception))
+
+    def test_column_letter_beyond_sheet_width_raises(self):
+        xlsx = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            shared_strings=_STRINGS,
+        )
+        with self.assertRaises(ValueError) as ctx:
+            from_xlsx(xlsx, region_col="ZZ", value_col=1)
+        self.assertIn("fora da planilha", str(ctx.exception))
+
+    def test_int_index_beyond_sheet_width_raises(self):
+        xlsx = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            shared_strings=_STRINGS,
+        )
+        with self.assertRaises(ValueError) as ctx:
+            from_xlsx(xlsx, region_col=0, value_col=99)
+        self.assertIn("value_col=99", str(ctx.exception))
+
+    def test_negative_index_raises(self):
+        xlsx = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            shared_strings=_STRINGS,
+        )
+        with self.assertRaises(ValueError):
+            from_xlsx(xlsx, region_col=-1, value_col=1)
 
     def test_non_numeric_value_raises(self):
         xlsx = self._make_xlsx_with_bad_value()
@@ -511,7 +561,7 @@ class TestFromXlsxErrors(unittest.TestCase):
 
 class TestFromXlsxEdgeCases(unittest.TestCase):
     def _build_xlsx_without_shared_strings(self) -> bytes:
-        """Planilha com apenas valores numéricos; sem sharedStrings.xml."""
+        """Sheet with numeric values only; no sharedStrings.xml."""
         # Sem strings compartilhadas: células têm valor numérico direto
         sheet_xml = (
             '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'

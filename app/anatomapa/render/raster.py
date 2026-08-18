@@ -1,8 +1,8 @@
-"""Rasterização opcional de SVG para PNG/JPEG.
+"""Optional SVG rasterisation to PNG/JPEG.
 
-Isolado num módulo próprio e com imports preguiçosos: a lib continua zero-dep
-por padrão e só toca em `cairosvg`/`Pillow` quando o usuário pede um formato
-raster. Sem o extra instalado, levanta ImportError com instrução de instalação.
+Isolated in its own module behind lazy imports: the library stays zero-dep by
+default and only touches `cairosvg`/`Pillow` when the user asks for a raster
+format. Without the extra installed, it raises ImportError with install hints.
 """
 
 from __future__ import annotations
@@ -16,7 +16,7 @@ _INSTALL_HINT = (
 
 
 def svg_to_png(svg: str, scale: float = 2.0) -> bytes:
-    """Converte SVG em bytes PNG via cairosvg (extra opcional)."""
+    """Convert SVG into PNG bytes via cairosvg (optional extra)."""
     try:
         import cairosvg
     except ImportError as exc:
@@ -25,9 +25,10 @@ def svg_to_png(svg: str, scale: float = 2.0) -> bytes:
 
 
 def png_to_jpeg(png: bytes, quality: int = 90) -> bytes:
-    """Converte bytes PNG em bytes JPEG via Pillow (extra opcional).
+    """Convert PNG bytes into JPEG bytes via Pillow (optional extra).
 
-    JPEG não tem canal alfa, então a imagem é achatada sobre um fundo branco.
+    JPEG has no alpha channel, so the image is flattened onto a white
+    background.
     """
     try:
         from PIL import Image

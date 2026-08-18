@@ -71,13 +71,13 @@ class Figure:
 
     @staticmethod
     def _extension(path: str | os.PathLike) -> str | None:
-        """Extrai a extensão conhecida do caminho, se houver."""
+        """Extract the known extension from the path, if any."""
         ext = os.path.splitext(os.fspath(path))[1].lower().lstrip(".")
         return ext if ext in ({"svg"} | _RASTER_FORMATS) else None
 
 
 class Renderer(Protocol):
-    """Protocolo para renderizadores de figura."""
+    """Protocol for figure renderers."""
 
     def render(
         self,
@@ -85,5 +85,5 @@ class Renderer(Protocol):
         model: AnatomicalModel,
         lang: str,
     ) -> Figure:
-        """Renderiza um Heatmap em uma Figure."""
+        """Render a Heatmap into a Figure."""
         ...

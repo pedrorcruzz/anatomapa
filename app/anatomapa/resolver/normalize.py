@@ -4,20 +4,20 @@ import unicodedata
 
 
 def slugify(text: str) -> str:
-    """Normaliza um rótulo para um slug canônico.
+    """Normalise a label into a canonical slug.
 
-    Passos: minúsculas, remove acentos, substitui hifens e espaços por
-    underscores, remove espaços nas bordas.
+    Steps: lowercase, strip accents, replace hyphens and spaces with
+    underscores, trim surrounding whitespace.
 
     Parameters
     ----------
     text:
-        Rótulo de entrada em qualquer idioma ou capitalização.
+        Input label in any language or capitalisation.
 
     Returns
     -------
     str
-        Slug normalizado adequado para correspondência de aliases.
+        Normalised slug suitable for alias matching.
     """
     text = text.strip().lower()
     # Remove acentos via decomposição unicode

@@ -1,5 +1,5 @@
-"""Testes da resolução robusta de rótulos: lateralidade, plurais, sinônimos,
-region_map com precedência, erro em lote, on_unknown, validate e render por lado."""
+"""Tests for robust label resolution: sides, plurals, synonyms, region_map
+precedence, batched errors, on_unknown, validate and per-side rendering."""
 import os
 import unittest
 import warnings

@@ -7,17 +7,17 @@ _ASSETS_DIR = os.path.join(os.path.dirname(__file__), "..", "assets")
 
 
 def load_metadata(assets_dir: str | None = None) -> list[dict]:
-    """Carrega os metadados das regiões a partir do regions.json.
+    """Load the region metadata from regions.json.
 
     Parameters
     ----------
     assets_dir:
-        Diretório contendo o regions.json. Padrão: diretório assets do pacote.
+        Directory holding regions.json. Defaults to the package assets folder.
 
     Returns
     -------
     list[dict]
-        Lista de dicionários de metadados conforme armazenado no regions.json.
+        Metadata dictionaries exactly as stored in regions.json.
     """
     base = assets_dir or _ASSETS_DIR
     path = os.path.join(base, "regions.json")

@@ -10,8 +10,8 @@ from anatomapa.domain.scale import Scale
 def _nearest_ancestor_value(
     region: Region, model: AnatomicalModel, values: dict[str, float]
 ) -> float | None:
-    """Percorre a cadeia `parent` a partir de `region` e devolve o valor do
-    ancestral mais próximo presente em `values`, ou None se nenhum tiver valor."""
+    """Walk the `parent` chain from `region` and return the value of the
+    nearest ancestor present in `values`, or None when none has a value."""
     parent_id = region.parent
     while parent_id is not None:
         if parent_id in values:
@@ -24,12 +24,13 @@ def _nearest_ancestor_value(
 def _rollup_values(
     values: dict[str, float], model: AnatomicalModel
 ) -> dict[str, float]:
-    """Expande valores por herança pai->filhos (rollup).
+    """Expand values through parent->child inheritance (rollup).
 
-    Toda região com geometria (tem path no SVG desta vista) que não recebeu
-    valor próprio herda o valor do ancestral mais próximo, na cadeia `parent`,
-    que tiver valor em `values`. Regiões agregadoras sem geometria (ex.:
-    "trunk") não recebem cor própria, mas seu valor guia os filhos.
+    Every region with geometry (a path in this view's SVG) that received no
+    value of its own inherits the value of the nearest ancestor in the
+    `parent` chain that has one in `values`. Aggregating regions with no
+    geometry (such as "trunk") get no colour of their own, but their value
+    still drives their children.
     """
     expanded = dict(values)
     for region in model.regions():
@@ -51,30 +52,30 @@ def build_heatmap(
     lang: str = "pt",
     title: str | None = None,
 ) -> Heatmap:
-    """Constrói um Heatmap mapeando valores de regiões para cores.
+    """Build a Heatmap by mapping region values to colours.
 
     Parameters
     ----------
     values:
-        Mapeamento do id canônico da região para valor numérico.
+        Mapping of canonical region id to numeric value.
     model:
-        Modelo anatômico com metadados das regiões.
+        Anatomical model carrying the region metadata.
     colormap:
-        ColorMap usado para interpolação RGB.
+        ColorMap used for RGB interpolation.
     scale:
-        Estratégia de escala para normalizar valores para [0, 1].
+        Scaling strategy that normalises values into [0, 1].
     lang:
-        Idioma dos rótulos.
+        Language of the labels.
     title:
-        Título opcional da figura.
+        Optional figure title.
 
     Returns
     -------
     Heatmap
-        Resultado imutável com mapeamento region_id -> RGB. Regiões com
-        geometria sem valor próprio herdam o valor do ancestral mais próximo
-        (rollup pai->filhos); value_min/value_max refletem só os valores reais
-        de entrada, sem o rollup.
+        Immutable result mapping region_id -> RGB. Regions with geometry but
+        no value of their own inherit the nearest ancestor's value (parent->
+        child rollup); value_min/value_max reflect only the real input values,
+        without the rollup.
     """
     if not values:
         return Heatmap(

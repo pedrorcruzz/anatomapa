@@ -7,21 +7,21 @@ from anatomapa.domain.region import Region
 
 @dataclass(frozen=True)
 class AnatomicalModel:
-    """Coleção de objetos Region indexados pelo id canônico."""
+    """Collection of Region objects indexed by canonical id."""
 
     _regions: tuple[Region, ...]
 
     def regions(self, view: str | None = None) -> tuple[Region, ...]:
-        """Retorna todas as regiões, opcionalmente filtradas por vista."""
+        """Return every region, optionally filtered by view."""
         return self._regions
 
     def get(self, region_id: str) -> Region | None:
-        """Retorna a Region pelo id canônico, ou None se não encontrada."""
+        """Return the Region with the given canonical id, or None if absent."""
         for r in self._regions:
             if r.id == region_id:
                 return r
         return None
 
     def ids(self) -> tuple[str, ...]:
-        """Retorna os ids canônicos de todas as regiões em ordem estável."""
+        """Return the canonical ids of every region in a stable order."""
         return tuple(r.id for r in self._regions)

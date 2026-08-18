@@ -10,7 +10,6 @@ class Region:
     id: str
     label_pt: str
     label_en: str
-    aliases: tuple[str, ...]
     bilateral: bool
     parent: str | None
     geometry: dict[str, str]

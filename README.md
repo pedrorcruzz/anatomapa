@@ -70,7 +70,7 @@ arquivo (glob), então use aspas para o comando funcionar em qualquer shell.
 ```python
 import anatomapa as am
 
-fig = am.heatmap({"MÃO": 5153, "PÉ": 13666, "cabeça": 845})
+fig = am.heatmap({"hand": 5153, "foot": 13666, "head": 845})
 fig.save("mapa.svg")
 ```
 
@@ -115,36 +115,27 @@ am.heatmap(dados, background="dark")
 
 ## Nomes de região
 
+A identificação é **estrita**: vale o id da região escrito exatamente como definido, ou uma
+chave do seu `region_map`. Nada é adivinhado, então não existe uma segunda grafia certa para
+a mesma região. Nome desconhecido levanta `ResolutionError`, listando o que falhou e sugerindo
+o mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
+
 **No código: o enum `Region`.** `from anatomapa import Region` traz 30 constantes: os 14 ids
-canônicos mais as versões `_LEFT`/`_RIGHT` das 8 regiões bilaterais. Cada membro é a própria
-string do id (`Region.TRUNK == "trunk"`), então vale onde qualquer rótulo vale: chave de
-`heatmap()` ou valor de `region_map`. O ganho: autocomplete no editor e typo vira erro
-imediato, não falha de resolução em runtime. `list(Region)` ou `list_regions()` listam os ids.
+canônicos mais as versões `_LEFT`/`_RIGHT` das 8 bilaterais. Cada membro é a própria string do
+id (`Region.TRUNK == "trunk"`), então vale como chave de `heatmap()` ou valor de `region_map`.
+O ganho é autocomplete e typo virando erro imediato. `list(Region)` ou `list_regions()` listam.
 
-**Em planilha ou texto livre: strings.** O resolvedor é tolerante de propósito: **PT ou EN**,
-maiúsc/minúsc, com ou sem acento, plural e sinônimos ("MÃO", "mao", "hand" e "punho" viram
-`hand`; "torso" vira `trunk`). Ele não chuta: nome desconhecido levanta `ResolutionError` com
-sugestões do mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
+**Lateralidade.** As bilaterais (braço, antebraço, mão, dedo, coxa, perna, pé, dedo do pé)
+aceitam lado pelo sufixo do id: `Region.HAND_RIGHT` pinta só a direita; sem sufixo
+(`Region.HAND`), o valor pinta os dois lados. Pedir lado em região central é erro.
 
-As duas formas são equivalentes por dentro:
-
-```python
-import anatomapa as am
-from anatomapa import Region
-
-am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # no código: à prova de typo
-am.heatmap({"mão esquerda": 100, "tronco": 50})        # planilha: nomes humanos
-```
-
-**Lateralidade.** Regiões bilaterais (braço, antebraço, mão, dedo, coxa, perna, pé, dedo do
-pé) aceitam lado: `"mão direita"`, `"right hand"`, o id `"hand_right"` ou `Region.HAND_RIGHT`
-pintam só a mão direita. Sem lado (`"mão"`, `Region.HAND`), o valor pinta os dois lados.
-
-**Seus próprios nomes.** Se a planilha usa códigos internos, mapeie com `region_map`
-(aceita ids lateralizados e tem precedência sobre o resolvedor):
+**Seus nomes vindos da planilha: `region_map`.** Como os rótulos da sua fonte quase nunca
+batem com os ids, é você quem declara a correspondência, uma vez, no código. A chave é
+comparada exatamente como está na planilha, incluindo acento e caixa alta:
 
 ```python
-am.heatmap(dados, region_map={"Membro Sup Dir": "arm", "right_hand": "hand_right"})
+am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # enum (ou "trunk"/"hand_left")
+am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM})
 ```
 
 ## Regiões e hierarquia
@@ -172,12 +163,12 @@ distribui valor para os filhos. Bilaterais recebem um valor pros dois lados (ou 
 **Rollup (herança pai para filhos).** Mande o dado no nível que você tiver:
 
 ```python
-am.heatmap({"tronco": 2602})                            # peito+abdômen+pelve+costas herdam
-am.heatmap({"peito": 900, "abdômen": 1200, "pelve": 500})  # ou por parte
+am.heatmap({"trunk": 2602})                                # chest+abdomen+pelvis+back herdam
+am.heatmap({"chest": 900, "abdomen": 1200, "pelvis": 500})  # ou por parte
 ```
 
 Um valor no pai desce automaticamente pros filhos; se você informar a parte específica, ela
-usa o próprio valor. Mesma lógica em `mão` para `dedo` e `pé` para `dedo do pé`.
+usa o próprio valor. Mesma lógica em `hand` para `finger` e `foot` para `toe`.
 
 **Região sem dado.** Região sem valor sai nativamente em **cinza neutro** (#9aa0a6),
 distinto do frio: "sem dado" não se confunde com "poucos casos". Sem parâmetro.
@@ -189,12 +180,12 @@ todos os leitores vai direto, sem conversão:
 
 ```python
 # dict puro (ou normalizado via from_dict)
-fig = am.heatmap(am.from_dict({"mão": 10, "pé": 25}))
+fig = am.heatmap(am.from_dict({"hand": 10, "foot": 25}))
 
 # CSV: você declara as colunas, nada é adivinhado
 dados = am.from_csv("lesoes.csv", region_col="regiao", value_col="total", delimiter=",")
 
-# JSON: objeto {"mão": 10} ou lista [{"region": "...", "value": ...}]
+# JSON: objeto {"hand": 10} ou lista [{"region": "...", "value": ...}]
 dados = am.from_json("lesoes.json", region_key="region", value_key="value")
 
 # Registros: dicts, namedtuples, dataclasses e DataFrame do pandas (duck typing)
@@ -236,9 +227,11 @@ Topografia de picadas de escorpião (frequência por região), do dado bruto ao 
 ```python
 import anatomapa as am
 
-dados = {"cabeça": 845, "braço": 1831, "antebraço": 974, "mão": 5153,
-         "dedo da mão": 8684, "tronco": 2602, "coxa": 1733, "perna": 1984,
-         "pé": 13666, "dedo do pé": 6547}
+from anatomapa import Region
+
+dados = {Region.HEAD: 845, Region.ARM: 1831, Region.FOREARM: 974, Region.HAND: 5153,
+         Region.FINGER: 8684, Region.TRUNK: 2602, Region.THIGH: 1733,
+         Region.LEG: 1984, Region.FOOT: 13666, Region.TOE: 6547}
 
 # 1. Confere os nomes antes de renderizar (dry-run, não gera nada)
 resultado = am.validate(dados)
@@ -255,9 +248,10 @@ fig.save("mapa.svg")
 faz o dry-run: não renderiza, só mostra o que resolve e o que não.
 
 ```python
-am.validate({"mao": 1, "pedro": 2, "mão direita": 3})
-# {'resolved': {'mao': 'hand', 'mão direita': 'hand_right'},
-#  'unresolved': {'pedro': {'reason': '...', 'suggestions': ['dedo', ...]}}}
+am.validate({"hand": 1, "haand": 2, "hand_right": 3})
+# {'resolved': {'hand': 'hand', 'hand_right': 'hand_right'},
+#  'unresolved': {'haand': {'reason': 'região desconhecida',
+#                           'suggestions': ['hand', 'head', 'hand_left']}}}
 ```
 
 **`list_regions(lang="pt", body="male")`** lista as regiões,

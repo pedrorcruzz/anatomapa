@@ -124,6 +124,42 @@ class TestBothViews(unittest.TestCase):
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+class TestSplitParameter(unittest.TestCase):
+    """Tests for split=True: view="both" as two independent figures."""
+
+    def test_split_returns_two_figures(self):
+        anterior, posterior = am.heatmap(
+            {"hand": 5, "buttocks": 2}, view="both", split=True
+        )
+        self.assertIn("hand-left", _ids(str(anterior)))
+        self.assertIn("buttocks", _ids(str(posterior)))
+        self.assertNotIn("buttocks", _ids(str(anterior)))
+
+    def test_split_figures_have_own_legend_and_no_prefix(self):
+        anterior, posterior = am.heatmap({"hand": 5}, view="both", split=True)
+        for svg in (str(anterior), str(posterior)):
+            self.assertIn("legend-bar", svg)
+            self.assertNotIn("anterior-hand-left", svg)
+            self.assertNotIn("posterior-hand-left", svg)
+
+    def test_split_matches_single_view_render(self):
+        # Cada figura do par é idêntica à vista renderizada sozinha
+        anterior, posterior = am.heatmap({"hand": 5}, view="both", split=True)
+        self.assertEqual(str(anterior), str(am.heatmap({"hand": 5}, view="anterior")))
+        self.assertEqual(str(posterior), str(am.heatmap({"hand": 5}, view="posterior")))
+
+    def test_split_keeps_format(self):
+        anterior, _ = am.heatmap({"hand": 5}, view="both", split=True, format="png")
+        self.assertNotIn("feGaussianBlur", str(anterior))
+
+    def test_split_requires_both(self):
+        with self.assertRaises(ValueError):
+            am.heatmap({"hand": 5}, view="anterior", split=True)
+        with self.assertRaises(ValueError):
+            am.heatmap({"hand": 5}, view="posterior", split=True)
+
+
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
 class TestListRegionsPerView(unittest.TestCase):
     def test_lists_every_region_by_default(self):
         ids = {r["id"] for r in am.list_regions()}

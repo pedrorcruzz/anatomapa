@@ -64,10 +64,12 @@ def heatmap(
     Parameters
     ----------
     values:
-        Mapping of region label -> value. Labels may be given in Portuguese or
-        English, with accents, plural forms and side ("mão direita", "left hand").
-        An iterable of (region, value) pairs is also accepted, such as the output
-        of the from_csv/from_json/from_records readers.
+        Mapping of region label -> value. A label must be a region id written
+        exactly as defined ("hand", "hand_left"), a Region enum member, or a
+        key of region_map. Names are never guessed, so a spreadsheet label such
+        as "MÃO" has to be mapped through region_map. An iterable of
+        (region, value) pairs is also accepted, such as the output of the
+        from_csv/from_json/from_records readers.
     body:
         Body type: "male" or "female".
     lang:

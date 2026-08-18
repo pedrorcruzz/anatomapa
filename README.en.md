@@ -135,13 +135,11 @@ canonical ids plus `_LEFT`/`_RIGHT` versions of the 8 bilateral ones. Each membe
 string itself (`Region.TRUNK == "trunk"`), so it works as a `heatmap()` key or `region_map`
 value. The gain: autocomplete and typos becoming immediate errors. `list(Region)` lists them.
 
-**Laterality.** The bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) take
-a side through the id suffix: `Region.HAND_RIGHT` paints only the right hand; without the
-suffix (`Region.HAND`), the value paints both sides. A side on a central region is an error.
+**Laterality.** The 8 bilateral regions take a side through the id suffix: `Region.HAND_RIGHT`
+paints only the right hand; without it, both sides. A side on a central region is an error.
 
-**Your spreadsheet names: `region_map`.** Since your source labels almost never match the ids,
-you declare the correspondence yourself, once, in code. The key is compared exactly as it
-appears in the spreadsheet, accents and case included:
+**Your spreadsheet names: `region_map`.** Source labels rarely match the ids, so you declare
+the correspondence once, in code; keys compare exactly as written, accents and case included:
 
 ```python
 am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # enum (or "trunk"/"hand_left")
@@ -150,25 +148,27 @@ am.heatmap(data, region_map={"HAND": Region.HAND, "FOREARM": Region.FOREARM})
 
 ## Regions and hierarchy
 
-There are **15 regions**. `trunk` is a **hierarchical aggregator**: it has no geometry of its
-own, it only distributes its value to its children, which change per view, as in any external
-anatomy atlas. **Bilateral** regions take a side through the `_left`/`_right` suffix
-(e.g. `hand_left`); without the suffix, the value paints both sides.
+| Id | Region | Front (`anterior`) | Back (`posterior`) | Sided? |
+|---|---|:---:|:---:|:---:|
+| `head` | head | ✓ | ✓ | no |
+| `trunk` | trunk (aggregator) | ✓ | ✓ | no |
+| `chest` | chest | ✓ |  | no |
+| `abdomen` | abdomen | ✓ |  | no |
+| `pelvis` | pelvis | ✓ |  | no |
+| `back` | back (dorsum) |  | ✓ | no |
+| `buttocks` | buttocks |  | ✓ | no |
+| `arm` | arm and shoulder | ✓ | ✓ | yes |
+| `forearm` | forearm | ✓ | ✓ | yes |
+| `hand` | hand | ✓ | ✓ | yes |
+| `finger` | hand fingers | ✓ | ✓ | yes |
+| `thigh` | thigh | ✓ | ✓ | yes |
+| `leg` | leg | ✓ | ✓ | yes |
+| `foot` | foot | ✓ | ✓ | yes |
+| `toe` | foot toes | ✓ | ✓ | yes |
 
-### Front view (`view="anterior"`, default)
-
-`head` · `chest` · `abdomen` · `pelvis` · `arm` (arm/shoulder) · `forearm` · `hand` ·
-`finger` (hand fingers) · `thigh` · `leg` · `foot` · `toe` (foot toes).
-The `trunk` aggregator paints `chest` + `abdomen` + `pelvis`.
-
-### Back view (`view="posterior"`)
-
-`head` · `back` (dorsum) · `buttocks` · `arm` · `forearm` · `hand` · `finger` · `thigh` ·
-`leg` · `foot` · `toe`.
-The `trunk` aggregator paints `back` + `buttocks`.
-
-`buttocks` and `back` are exclusive to the posterior view; `chest`, `abdomen` and `pelvis`
-to the anterior; everything else is valid in both. `list_regions(view=...)` filters per view.
+Of the **15 regions**, `trunk` is the aggregator: no geometry of its own, it paints the drawn
+view's children (front, `chest`+`abdomen`+`pelvis`; back, `back`+`buttocks`). Bilaterals take the
+`_left`/`_right` suffix; without it, both sides paint. `list_regions(view=...)` filters per view.
 
 **Rollup (parent-to-children inheritance).** Send data at whatever level you have:
 

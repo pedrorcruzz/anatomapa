@@ -158,7 +158,6 @@ class TestMissingParameterRenderer(unittest.TestCase):
                     id="head",
                     label_pt="Cabeça",
                     label_en="Head",
-                    aliases=(),
                     bilateral=False,
                     parent=None,
                     geometry={"center": "M 10 10 Z"},
@@ -220,37 +219,37 @@ class TestMissingParameterRenderer(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de resolução")
 class TestSubdivisionNameResolution(unittest.TestCase):
-    """Tests that the new Portuguese names resolve to the right ids."""
+    """Tests that the subdivision ids resolve and Portuguese names do not."""
 
     def setUp(self):
         from anatomapa.model import loader as _loader
         self.model_anterior = _loader.load("anterior", body="male")
         self.model_posterior = _loader.load("posterior", body="male")
 
-    def test_peito_resolves_to_chest(self):
+    def test_subdivision_ids_resolve(self):
         from anatomapa.resolver.resolver import resolve
-        result = resolve(["peito"], self.model_anterior)
+        ids = ["chest", "abdomen", "pelvis", "trunk"]
+        result = resolve(ids, self.model_anterior)
+        self.assertEqual(result, {rid: rid for rid in ids})
+
+    def test_back_id_resolves(self):
+        from anatomapa.resolver.resolver import resolve
+        result = resolve(["back"], self.model_posterior)
+        self.assertEqual(result["back"], "back")
+
+    def test_portuguese_names_are_rejected(self):
+        from anatomapa.resolver.resolver import ResolutionError, resolve
+        for label in ("peito", "costas", "pelve", "tronco"):
+            with self.subTest(label=label):
+                with self.assertRaises(ResolutionError):
+                    resolve([label], self.model_anterior)
+
+    def test_portuguese_name_works_through_region_map(self):
+        from anatomapa.resolver.resolver import resolve
+        result = resolve(
+            ["peito"], self.model_anterior, region_map={"peito": "chest"}
+        )
         self.assertEqual(result["peito"], "chest")
-
-    def test_costas_resolves_to_back(self):
-        from anatomapa.resolver.resolver import resolve
-        result = resolve(["costas"], self.model_posterior)
-        self.assertEqual(result["costas"], "back")
-
-    def test_abdomen_resolves_to_abdomen(self):
-        from anatomapa.resolver.resolver import resolve
-        result = resolve(["abdomen"], self.model_anterior)
-        self.assertEqual(result["abdomen"], "abdomen")
-
-    def test_pelve_resolves_to_pelvis(self):
-        from anatomapa.resolver.resolver import resolve
-        result = resolve(["pelve"], self.model_anterior)
-        self.assertEqual(result["pelve"], "pelvis")
-
-    def test_tronco_resolves_to_trunk(self):
-        from anatomapa.resolver.resolver import resolve
-        result = resolve(["tronco"], self.model_anterior)
-        self.assertEqual(result["tronco"], "trunk")
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de render com rollup")

@@ -69,7 +69,7 @@ quote the command to make it work everywhere.
 ```python
 import anatomapa as am
 
-fig = am.heatmap({"HAND": 5153, "FOOT": 13666, "head": 845})
+fig = am.heatmap({"hand": 5153, "foot": 13666, "head": 845})
 fig.save("map.svg")
 ```
 
@@ -114,36 +114,27 @@ am.heatmap(data, background="dark")
 
 ## Region names
 
+Identification is **strict**: a label must be a region id written exactly as defined, or a key
+of your `region_map`. Nothing is guessed, so there is never a second correct spelling for the
+same region. An unknown name raises `ResolutionError`, listing what failed and suggesting the
+closest match. Control it with `on_unknown`: `"error"` (default), `"skip"` or `"warn"`.
+
 **In code: the `Region` enum.** `from anatomapa import Region` gives 30 constants: the 14
-canonical ids plus `_LEFT`/`_RIGHT` versions of the 8 bilateral regions. Each member is the
-id string itself (`Region.TRUNK == "trunk"`), so it works anywhere a label works: `heatmap()`
-key or `region_map` value. The gain: editor autocomplete and typos becoming immediate errors,
-not runtime resolution failures. `list(Region)` or `list_regions()` list every valid id.
+canonical ids plus `_LEFT`/`_RIGHT` versions of the 8 bilateral ones. Each member is the id
+string itself (`Region.TRUNK == "trunk"`), so it works as a `heatmap()` key or `region_map`
+value. The gain: autocomplete and typos becoming immediate errors. `list(Region)` lists them.
 
-**From spreadsheets or free text: strings.** The resolver is forgiving on purpose: **PT or
-EN**, any case, accents or not, plurals and synonyms ("HAND", "hand", "mão", "wrist" become
-`hand`; "torso" becomes `trunk`). It never guesses: an unknown name raises `ResolutionError`
-with suggestions. Control it with `on_unknown`: `"error"` (default), `"skip"` or `"warn"`.
+**Laterality.** The bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) take
+a side through the id suffix: `Region.HAND_RIGHT` paints only the right hand; without the
+suffix (`Region.HAND`), the value paints both sides. A side on a central region is an error.
 
-Both forms are equivalent under the hood:
-
-```python
-import anatomapa as am
-from anatomapa import Region
-
-am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # in code: typo-proof
-am.heatmap({"left hand": 100, "trunk": 50})            # spreadsheet: human names
-```
-
-**Laterality.** Bilateral regions (arm, forearm, hand, finger, thigh, leg, foot, toe) accept
-a side: `"right hand"`, `"mão direita"`, the id `"hand_right"` or `Region.HAND_RIGHT` paint
-only the right hand. Without a side (`"hand"`, `Region.HAND`), the value paints both sides.
-
-**Your own names.** If your spreadsheet uses internal codes, map them with `region_map`
-(side ids allowed; it takes precedence over the resolver):
+**Your spreadsheet names: `region_map`.** Since your source labels almost never match the ids,
+you declare the correspondence yourself, once, in code. The key is compared exactly as it
+appears in the spreadsheet, accents and case included:
 
 ```python
-am.heatmap(data, region_map={"Upper Right Limb": "arm", "right_hand": "hand_right"})
+am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # enum (or "trunk"/"hand_left")
+am.heatmap(data, region_map={"HAND": Region.HAND, "FOREARM": Region.FOREARM})
 ```
 
 ## Regions and hierarchy
@@ -236,9 +227,11 @@ Scorpion sting topography (frequency per region), from raw data to the final map
 ```python
 import anatomapa as am
 
-data = {"cabeça": 845, "braço": 1831, "antebraço": 974, "mão": 5153,
-        "dedo da mão": 8684, "tronco": 2602, "coxa": 1733, "perna": 1984,
-        "pé": 13666, "dedo do pé": 6547}
+from anatomapa import Region
+
+data = {Region.HEAD: 845, Region.ARM: 1831, Region.FOREARM: 974, Region.HAND: 5153,
+        Region.FINGER: 8684, Region.TRUNK: 2602, Region.THIGH: 1733,
+        Region.LEG: 1984, Region.FOOT: 13666, Region.TOE: 6547}
 
 # 1. Check the names before rendering (dry-run, renders nothing)
 result = am.validate(data)
@@ -255,9 +248,10 @@ fig.save("map.svg")
 does the dry-run: it does not render, it only shows what resolves and what does not.
 
 ```python
-am.validate({"hand": 1, "pedro": 2, "right hand": 3})
-# {'resolved': {'hand': 'hand', 'right hand': 'hand_right'},
-#  'unresolved': {'pedro': {'reason': '...', 'suggestions': ['finger', ...]}}}
+am.validate({"hand": 1, "haand": 2, "hand_right": 3})
+# {'resolved': {'hand': 'hand', 'hand_right': 'hand_right'},
+#  'unresolved': {'haand': {'reason': 'região desconhecida',
+#                           'suggestions': ['hand', 'head', 'hand_left']}}}
 ```
 
 **`list_regions(lang="pt", body="male")`** lists the regions,

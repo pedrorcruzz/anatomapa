@@ -145,6 +145,58 @@ def _parse_viewbox(svg_string: str) -> tuple[float, float, float, float]:
         return 0.0, 0.0, 400.0, 900.0
 
 
+def _viewbox_of(root: ET.Element) -> tuple[float, float, float, float]:
+    """Read the viewBox already set on an element, as (min-x, min-y, width, height)."""
+    parts = (root.get("viewBox") or "").split()
+    if len(parts) != 4:
+        return 0.0, 0.0, 400.0, 900.0
+    try:
+        return float(parts[0]), float(parts[1]), float(parts[2]), float(parts[3])
+    except ValueError:
+        return 0.0, 0.0, 400.0, 900.0
+
+
+def _append_title(root: ET.Element, title: str | None, background: str) -> None:
+    """Draw the figure title in a band above the drawing, growing the viewBox upwards.
+
+    Does nothing without a title, so a figure with none keeps exactly the same
+    layout. Must run after the legend, which widens the viewBox sideways.
+    """
+    if not title:
+        return
+
+    vx, vy, vw, vh = _viewbox_of(root)
+    base_size = vh * 0.030
+    # Título longo encolhe para caber na largura (~0.58 de avanço por caractere
+    # em Helvetica negrito), mas a faixa mantém a altura do tamanho cheio
+    fitted = vw * 0.92 / max(len(title) * 0.58, 1.0)
+    font_size = min(base_size, fitted)
+    band_h = base_size * 2.4
+    new_vy = round(vy - band_h, 2)
+    new_vh = round(vh + band_h, 2)
+    root.set("viewBox", f"{vx} {new_vy} {vw} {new_vh}")
+
+    # O fundo já foi criado com a altura antiga: cresce junto, senão fica uma
+    # tira sem fundo em cima
+    for elem in root.iter():
+        if elem.get("id") == "figure-background":
+            elem.set("y", str(new_vy))
+            elem.set("height", str(new_vh))
+            break
+
+    ui_main = _legend_ui_colors(background)[0]
+    text = ET.SubElement(root, "text")
+    text.set("id", "figure-title")
+    text.set("x", str(round(vx + vw / 2.0, 2)))
+    text.set("y", str(round(new_vy + band_h * 0.62, 2)))
+    text.set("text-anchor", "middle")
+    text.set("font-size", str(round(font_size, 2)))
+    text.set("font-family", "Helvetica, Arial, sans-serif")
+    text.set("font-weight", "600")
+    text.set("fill", ui_main)
+    text.text = title
+
+
 def _extract_body_outline_d(svg_string: str) -> str | None:
     """Extract the d attribute of the path with id='body-outline', or None if absent."""
     try:
@@ -816,6 +868,8 @@ def _build_smooth_svg(
     if legend:
         _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
 
+    _append_title(root, heatmap.title, background)
+
     return ET.tostring(root, encoding="unicode")
 
 
@@ -899,6 +953,8 @@ def compose_views(
             root, heatmap, colormap, vx, vy, total_w, vh,
             lang=lang, background=background,
         )
+
+    _append_title(root, heatmap.title, background)
 
     return ET.tostring(root, encoding="unicode")
 
@@ -1063,6 +1119,7 @@ class SvgRenderer:
 
         regions_group = find_regions_group(root)
         if regions_group is None:
+            _append_title(root, heatmap.title, background)
             return ET.tostring(root, encoding="unicode")
 
         defs = ET.Element("defs")
@@ -1121,6 +1178,8 @@ class SvgRenderer:
 
         if legend and colormap is not None:
             _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
+
+        _append_title(root, heatmap.title, background)
 
         return ET.tostring(root, encoding="unicode")
 
@@ -1183,5 +1242,7 @@ class SvgRenderer:
 
         if legend and colormap is not None:
             _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)
+
+        _append_title(root, heatmap.title, background)
 
         return ET.tostring(root, encoding="unicode")

@@ -19,7 +19,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.3"
+__version__ = "0.3.4"
 __all__ = [
     "heatmap",
     "validate",
@@ -43,7 +43,7 @@ _VIEW = "anterior"
 
 
 def _views_of(view: str) -> tuple[str, ...]:
-    """Vistas a desenhar: "both" vira as duas, na ordem frente e depois costas."""
+    """Views to draw: "both" expands into the two, front first and back second."""
     return ("anterior", "posterior") if view == "both" else (view,)
 
 
@@ -95,9 +95,13 @@ def heatmap(
         extra (pip install anatomapa[raster]). Raster output uses per-region
         gradients that blend into the neighbouring regions, so the thermal
         look is preserved without SVG filters, which raster converters do not
-        implement; the colours and the legend are the same.
+        implement; the colours and the legend are the same. Saving an "svg"
+        figure to a .png/.jpg path rasterises that very variant, so this
+        parameter only picks the default format when the path has no extension.
     title:
-        Optional title embedded in the SVG and in the legend.
+        Optional figure title. When given, it is drawn in a band above the
+        drawing and embedded as the SVG <title> element. Omitted by default,
+        and then nothing is drawn and the layout stays unchanged.
     background:
         Figure background: "dark", "light" or "transparent" (default, no background
         rectangle). Legend text colors adapt to the chosen background.
@@ -174,8 +178,8 @@ def heatmap(
     base = _loader._ASSETS_DIR
 
     # O degradê térmico é feito com filtro SVG, que os conversores raster não
-    # implementam: em PNG/JPG o corpo sairia branco. Para esses formatos a
-    # figura sai em preenchimento chapado, com a mesma cor por região.
+    # implementam: rasterizar essa versão devolveria o corpo branco. Para
+    # PNG/JPG a figura sai em degradê chapado, com as mesmas cores.
     smooth = fmt == "svg"
 
     def _render_one(
@@ -183,8 +187,9 @@ def heatmap(
         with_legend: bool,
         panel_background: str,
         panel_title: str | None,
+        panel_smooth: bool,
     ):
-        """Renderiza uma vista. Cada vista tem seu modelo, pois as regiões mudam."""
+        """Render a single view. Each view loads its own model, as the regions differ."""
         view_model = _loader.load(view_name, None, body)
         heat = _build_heatmap(
             values=canonical_values,
@@ -202,7 +207,7 @@ def heatmap(
             view_model,
             lang=lang,
             base_svg=base_svg,
-            smooth=smooth,
+            smooth=panel_smooth,
             legend=with_legend,
             colormap=colormap,
             background=panel_background,
@@ -210,37 +215,61 @@ def heatmap(
         )
         return heat, figure.to_svg()
 
-    if len(views) == 1:
-        _, svg = _render_one(views[0], True, background, title)
-        return Figure(svg, format=fmt)
+    def _render_all(panel_smooth: bool) -> str | tuple[str, str]:
+        """Render every SVG of this call: one string, or the pair when split."""
+        if len(views) == 1:
+            return _render_one(views[0], True, background, title, panel_smooth)[1]
 
-    # "both" com split: duas figuras independentes, cada uma com a própria
-    # legenda; a escala é a mesma porque os valores são os mesmos
-    if split:
-        figures = []
+        # "both" com split: duas figuras independentes, cada uma com a própria
+        # legenda; a escala é a mesma porque os valores são os mesmos
+        if split:
+            return tuple(
+                _render_one(view_name, True, background, title, panel_smooth)[1]
+                for view_name in views
+            )
+
+        # "both": painéis sem legenda, fundo nem título próprios, compostos lado
+        # a lado com uma legenda só
+        panels = []
+        shared_heat = None
         for view_name in views:
-            _, svg = _render_one(view_name, True, background, title)
-            figures.append(Figure(svg, format=fmt))
-        return figures[0], figures[1]
+            heat, svg = _render_one(view_name, False, "transparent", None, panel_smooth)
+            shared_heat = shared_heat or replace(heat, title=title)
+            panels.append((f"{view_name}-", svg))
+        return _compose_views(
+            panels,
+            shared_heat,
+            colormap,
+            legend=True,
+            lang=lang,
+            background=background,
+        )
 
-    # "both": painéis sem legenda, fundo nem título próprios, compostos lado a
-    # lado com uma legenda só; a escala é a mesma porque os valores são os mesmos
-    panels = []
-    shared_heat = None
-    for view_name in views:
-        heat, svg = _render_one(view_name, False, "transparent", None)
-        shared_heat = shared_heat or replace(heat, title=title)
-        panels.append((f"{view_name}-", svg))
+    # A versão chapada só é montada se alguém pedir raster, e uma vez só
+    flat_cache: list = []
 
-    composed = _compose_views(
-        panels,
-        shared_heat,
-        colormap,
-        legend=True,
-        lang=lang,
-        background=background,
+    def _flat_all():
+        if not flat_cache:
+            flat_cache.append(_render_all(False))
+        return flat_cache[0]
+
+    rendered = _render_all(smooth)
+
+    if split:
+        return tuple(
+            Figure(
+                rendered[index],
+                format=fmt,
+                raster_svg=(lambda i=index: _flat_all()[i]) if smooth else None,
+            )
+            for index in range(2)
+        )
+
+    return Figure(
+        rendered,
+        format=fmt,
+        raster_svg=_flat_all if smooth else None,
     )
-    return Figure(composed, format=fmt)
 
 
 def validate(

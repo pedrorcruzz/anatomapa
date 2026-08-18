@@ -5,6 +5,7 @@ from __future__ import annotations
 import os
 import warnings
 from dataclasses import replace
+from typing import Literal, overload
 
 from anatomapa.color.registry import get_colormap, get_scale
 from anatomapa.domain.heatmap import Heatmap
@@ -19,7 +20,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.4"
+__version__ = "0.3.5"
 __all__ = [
     "heatmap",
     "validate",
@@ -54,6 +55,52 @@ def _as_dict(values) -> dict:
     return dict(values)
 
 _renderer = SvgRenderer()
+
+
+@overload
+def heatmap(
+    values,
+    view: str = ...,
+    body: str = ...,
+    lang: str = ...,
+    format: str = ...,
+    title: str | None = ...,
+    background: str = ...,
+    on_unknown: str = ...,
+    region_map: dict[str, str] | None = ...,
+    split: Literal[False] = False,
+) -> Figure: ...
+
+
+@overload
+def heatmap(
+    values,
+    view: str = ...,
+    body: str = ...,
+    lang: str = ...,
+    format: str = ...,
+    title: str | None = ...,
+    background: str = ...,
+    on_unknown: str = ...,
+    region_map: dict[str, str] | None = ...,
+    split: Literal[True] = ...,
+) -> tuple[Figure, Figure]: ...
+
+
+# Fallback para quem passa uma variável bool, cujo valor o checker não conhece
+@overload
+def heatmap(
+    values,
+    view: str = ...,
+    body: str = ...,
+    lang: str = ...,
+    format: str = ...,
+    title: str | None = ...,
+    background: str = ...,
+    on_unknown: str = ...,
+    region_map: dict[str, str] | None = ...,
+    split: bool = ...,
+) -> Figure | tuple[Figure, Figure]: ...
 
 
 def heatmap(

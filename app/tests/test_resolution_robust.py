@@ -30,8 +30,23 @@ def _model() -> AnatomicalModel:
 
 
 def _fills_by_id(svg: str) -> dict[str, str]:
+    """Resolve each region's own colour, unwrapping blending gradients."""
     root = ET.fromstring(svg)
-    return {e.get("id"): e.get("fill") for e in root.iter() if e.get("id")}
+    # No gradiente de mescla, a cor propria da regiao e o stop central (0.3)
+    grad_colors = {}
+    for elem in root.iter():
+        if elem.tag.endswith("linearGradient") and elem.get("id", "").startswith("grad-"):
+            stops = {s.get("offset"): s.get("stop-color") for s in elem}
+            grad_colors[elem.get("id")] = stops.get("0.3")
+    fills = {}
+    for elem in root.iter():
+        if not elem.get("id"):
+            continue
+        fill = elem.get("fill")
+        if fill and fill.startswith("url(#"):
+            fill = grad_colors.get(fill[len("url(#"):-1], fill)
+        fills[elem.get("id")] = fill
+    return fills
 
 
 class TestLateralResolve(unittest.TestCase):
@@ -193,6 +208,47 @@ class TestRenderPerSide(unittest.TestCase):
 
 
 class TestRenderHelpers(unittest.TestCase):
+    def test_edge_color_pair_without_present_neighbors(self):
+        """A pair reference with no present region keeps the region's own colour."""
+        from anatomapa.render.svg import _edge_color
+        # Pelve sem coxas no SVG: a borda mantém a própria cor
+        edge = _edge_color({}, ("thigh-left", "thigh-right"), "#112233")
+        self.assertEqual(edge, "#112233")
+
+    def test_center_of_pair_without_present_regions(self):
+        """A pair reference with no present region has no centre."""
+        from anatomapa.render.svg import _center_of
+        self.assertIsNone(_center_of(("thigh-left", "thigh-right"), {}))
+
+    def test_gradient_line_defaults_to_vertical(self):
+        """With no neighbours the blending axis is vertical over the shape."""
+        from anatomapa.render.svg import _gradient_line
+        line = _gradient_line([(0.0, 0.0), (10.0, 20.0)], None, None)
+        self.assertEqual(line, (5.0, 0.0, 5.0, 20.0))
+
+    def test_gradient_line_degenerate_axis_falls_vertical(self):
+        """A neighbour centred on the shape yields a vertical fallback axis."""
+        from anatomapa.render.svg import _gradient_line
+        # Vizinho exatamente no centro da forma: eixo degenerado
+        line = _gradient_line([(0.0, 0.0), (10.0, 20.0)], None, (5.0, 10.0))
+        self.assertEqual(line, (5.0, 0.0, 5.0, 20.0))
+
+    def test_axis_color_replays_the_gradient(self):
+        """Sampling a region's colour follows its ramps, plateau and edges."""
+        from anatomapa.render.svg import _axis_color
+        info = {"line": (0.0, 0.0, 0.0, 10.0), "top": "#000000",
+                "self": "#0000ff", "bottom": "#00ff00"}
+        self.assertEqual(_axis_color(info, (0.0, -1.0)), "#000000")
+        self.assertEqual(_axis_color(info, (0.0, 5.0)), "#0000ff")
+        self.assertEqual(_axis_color(info, (0.0, 11.0)), "#00ff00")
+        # Meio da rampa de cima: mistura entre a borda e a própria cor
+        middle = _axis_color(info, (0.0, 1.5))
+        self.assertNotIn(middle, ("#000000", "#0000ff"))
+        # Linha degenerada devolve a própria cor
+        degenerate = {"line": (0.0, 0.0, 0.0, 0.0), "top": "#111111",
+                      "self": "#222222", "bottom": "#333333"}
+        self.assertEqual(_axis_color(degenerate, (5.0, 5.0)), "#222222")
+
     def test_canonical_and_side(self):
         self.assertEqual(_canonical_and_side("hand-left"), ("hand", "left"))
         self.assertEqual(_canonical_and_side("hand-right"), ("hand", "right"))

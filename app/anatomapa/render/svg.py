@@ -157,6 +157,315 @@ def _extract_body_outline_d(svg_string: str) -> str | None:
     return None
 
 
+def _split_outline_d(outline_d: str) -> tuple[str, str]:
+    """Split an outline path into (silhouette, details) by subpath area.
+
+    The subpath with the largest bounding box is the external silhouette;
+    every other subpath is interior detail (face, hands, back grooves).
+    Assets only use absolute commands, so subpaths start at ``M``.
+    """
+    subpaths = [s.strip() for s in re.split(r"(?=M[ ,])", outline_d) if s.strip()]
+    if len(subpaths) < 2:
+        return outline_d, ""
+
+    def bbox_area(subpath: str) -> float:
+        nums = [float(v) for v in re.findall(r"-?\d+\.?\d*", subpath)]
+        xs, ys = nums[0::2], nums[1::2]
+        return (max(xs) - min(xs)) * (max(ys) - min(ys))
+
+    silhouette = max(subpaths, key=bbox_area)
+    details = [s for s in subpaths if s is not silhouette]
+    return silhouette, " ".join(details)
+
+
+def _hex_to_rgb(value: str) -> tuple[int, int, int]:
+    """Parse a #rrggbb string into an RGB tuple."""
+    return int(value[1:3], 16), int(value[3:5], 16), int(value[5:7], 16)
+
+
+def _lerp_hex(a: str, b: str, t: float) -> str:
+    """Interpolate two #rrggbb colours channel by channel."""
+    ra, ga, ba = _hex_to_rgb(a)
+    rb, gb, bb = _hex_to_rgb(b)
+    return _rgb_to_hex((
+        round(ra + (rb - ra) * t),
+        round(ga + (gb - ga) * t),
+        round(ba + (bb - ba) * t),
+    ))
+
+
+def _mix_hex(a: str, b: str) -> str:
+    """Average two #rrggbb colours channel by channel."""
+    return _lerp_hex(a, b, 0.5)
+
+
+def _eased_ramp(
+    start: float, end: float, color_from: str, color_to: str
+) -> list[tuple[float, str]]:
+    """Gradient stops of a ramp with smoothstep easing.
+
+    A linear ramp meeting a plateau creates a visible Mach band, an illusory
+    line where the colour slope breaks. Easing the ramp in and out removes
+    the break, so the transition reads as continuous shading.
+    """
+    stops = []
+    for fraction in (0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0):
+        eased = fraction * fraction * (3.0 - 2.0 * fraction)
+        offset = start + (end - start) * fraction
+        stops.append((offset, _lerp_hex(color_from, color_to, eased)))
+    return stops
+
+
+def _vertical_neighbors(
+    present: set[str],
+) -> dict[str, tuple[object, object]]:
+    """Map each region to its (above, below) neighbours along the body axis.
+
+    Neighbours drive the colour blending between adjacent regions. A tuple
+    value blends the edge with the average of several regions (the pelvis
+    meets both thighs). Regions absent from `present` are dropped.
+    """
+    posterior = "back" in present
+    trunk_top = "back" if posterior else "chest"
+    trunk_bottom = "buttocks" if posterior else "pelvis"
+    thighs = ("thigh-left", "thigh-right")
+    neighbors: dict[str, tuple[object, object]] = {"head": (None, trunk_top)}
+    if posterior:
+        neighbors["back"] = ("head", "buttocks")
+        neighbors["buttocks"] = ("back", thighs)
+    else:
+        neighbors["chest"] = ("head", "abdomen")
+        neighbors["abdomen"] = ("chest", "pelvis")
+        neighbors["pelvis"] = ("abdomen", thighs)
+    for side in ("left", "right"):
+        neighbors[f"arm-{side}"] = (trunk_top, f"forearm-{side}")
+        neighbors[f"forearm-{side}"] = (f"arm-{side}", f"hand-{side}")
+        neighbors[f"hand-{side}"] = (f"forearm-{side}", f"finger-{side}")
+        neighbors[f"finger-{side}"] = (f"hand-{side}", None)
+        neighbors[f"thigh-{side}"] = (trunk_bottom, f"leg-{side}")
+        neighbors[f"leg-{side}"] = (f"thigh-{side}", f"foot-{side}")
+        neighbors[f"foot-{side}"] = (f"leg-{side}", f"toe-{side}")
+        neighbors[f"toe-{side}"] = (f"foot-{side}", None)
+    return {k: v for k, v in neighbors.items() if k in present}
+
+
+def _edge_color(
+    fills: dict[str, str],
+    ref: object,
+    self_hex: str,
+    reciprocal: bool = True,
+) -> str:
+    """Colour of a region edge facing its neighbour.
+
+    When the neighbour also fades towards this region the two meet halfway;
+    when it does not (the trunk never fades towards the arms), the edge takes
+    the neighbour's full colour so the seam disappears on this side alone.
+    """
+    if ref is None:
+        return self_hex
+    if isinstance(ref, tuple):
+        found = [fills[r] for r in ref if r in fills]
+        if not found:
+            return self_hex
+        base = found[0] if len(found) == 1 else _mix_hex(found[0], found[1])
+    elif ref in fills:
+        base = fills[ref]
+    else:
+        return self_hex
+    return _mix_hex(self_hex, base) if reciprocal else base
+
+
+def _path_points(d: str) -> list[tuple[float, float]]:
+    """Coordinate pairs of a path's data attribute."""
+    nums = [float(v) for v in re.findall(r"-?\d+\.?\d*", d)]
+    return list(zip(nums[0::2], nums[1::2]))
+
+
+def _points_bbox(points: list[tuple[float, float]]) -> tuple[float, float, float, float]:
+    """Bounding box (x0, y0, x1, y1) of a list of points."""
+    xs = [p[0] for p in points]
+    ys = [p[1] for p in points]
+    return min(xs), min(ys), max(xs), max(ys)
+
+
+def _center_of(ref: object, boxes: dict) -> tuple[float, float] | None:
+    """Centre of a neighbour reference; averages a tuple of regions."""
+    if isinstance(ref, tuple):
+        found = [boxes[r] for r in ref if r in boxes]
+        if not found:
+            return None
+        centers = [((b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0) for b in found]
+        return (
+            sum(c[0] for c in centers) / len(centers),
+            sum(c[1] for c in centers) / len(centers),
+        )
+    if ref in boxes:
+        b = boxes[ref]
+        return (b[0] + b[2]) / 2.0, (b[1] + b[3]) / 2.0
+    return None
+
+
+def _gradient_line(
+    points: list[tuple[float, float]],
+    above_center: tuple[float, float] | None,
+    below_center: tuple[float, float] | None,
+) -> tuple[float, float, float, float]:
+    """Endpoints of the blending axis across a region, in user space.
+
+    The axis follows the limb: it points from the neighbour above towards the
+    neighbour below, so angled arms blend along their own direction instead
+    of the vertical. It spans the projection of the region's own points; the
+    bounding box would overshoot on diagonal limbs and push the ramps outside
+    the shape.
+    """
+    box = _points_bbox(points)
+    cx, cy = (box[0] + box[2]) / 2.0, (box[1] + box[3]) / 2.0
+    if above_center and below_center:
+        vx, vy = below_center[0] - above_center[0], below_center[1] - above_center[1]
+    elif below_center:
+        vx, vy = below_center[0] - cx, below_center[1] - cy
+    elif above_center:
+        vx, vy = cx - above_center[0], cy - above_center[1]
+    else:
+        vx, vy = 0.0, 1.0
+    length = (vx * vx + vy * vy) ** 0.5
+    # Eixo degenerado cai no vertical
+    if length < 1e-6:
+        vx, vy, length = 0.0, 1.0, 1.0
+    ux, uy = vx / length, vy / length
+    spans = [(px - cx) * ux + (py - cy) * uy for px, py in points]
+    t0, t1 = min(spans), max(spans)
+    return cx + t0 * ux, cy + t0 * uy, cx + t1 * ux, cy + t1 * uy
+
+
+def _points_back(ref: object, region_id: str, neighbors: dict, position: int) -> bool:
+    """Whether the neighbour's opposite edge fades towards this region."""
+    if not isinstance(ref, str):
+        # Par de coxas: ambas apontam de volta para a pelve
+        return True
+    counterpart = neighbors.get(ref, (None, None))[position]
+    if isinstance(counterpart, tuple):
+        return region_id in counterpart
+    return counterpart == region_id
+
+
+def _axis_color(info: dict, point: tuple[float, float]) -> str:
+    """Displayed colour of a region at a point, replaying its gradient."""
+    x1, y1, x2, y2 = info["line"]
+    dx, dy = x2 - x1, y2 - y1
+    denom = dx * dx + dy * dy
+    if denom < 1e-9:
+        return info["self"]
+    t = ((point[0] - x1) * dx + (point[1] - y1) * dy) / denom
+    if t <= 0.0:
+        return info["top"]
+    if t < 0.3:
+        f = t / 0.3
+        return _lerp_hex(info["top"], info["self"], f * f * (3.0 - 2.0 * f))
+    if t <= 0.7:
+        return info["self"]
+    if t >= 1.0:
+        return info["bottom"]
+    f = (t - 0.7) / 0.3
+    return _lerp_hex(info["self"], info["bottom"], f * f * (3.0 - 2.0 * f))
+
+
+def _region_fill_map(
+    defs: ET.Element,
+    fills: dict[str, str],
+    points: dict[str, list[tuple[float, float]]],
+    draw: set[str] | None = None,
+) -> tuple[dict[str, str], dict[str, str]]:
+    """Create blending gradients; return each region's fill and its veils.
+
+    A region whose edges match its own colour keeps the plain fill; the
+    others get a linearGradient along the limb axis fading into the
+    neighbouring colours, so adjacent regions transition smoothly instead of
+    hard-cutting. Junction regions such as the deltoid also get a "veil": a
+    vertical overlay in the trunk colour fading to transparent, painted over
+    the fill, because their two borders are nearly perpendicular and a single
+    gradient direction cannot align with both.
+    """
+    neighbors = _vertical_neighbors(set(fills))
+    result: dict[str, str] = {}
+    veils: dict[str, str] = {}
+    boxes = {rid: _points_bbox(pts) for rid, pts in points.items()}
+
+    # Primeira passada: cores de borda e eixo de cada região, porque o véu de
+    # uma junção precisa amostrar a cor EXIBIDA pelo vizinho, não a cor base
+    info: dict[str, dict] = {}
+    for region_id, self_hex in fills.items():
+        above, below = neighbors.get(region_id, (None, None))
+        above_reciprocal = _points_back(above, region_id, neighbors, 1)
+        top = _edge_color(fills, above, self_hex, reciprocal=above_reciprocal)
+        bottom = _edge_color(
+            fills, below, self_hex,
+            reciprocal=_points_back(below, region_id, neighbors, 0),
+        )
+        line = _gradient_line(
+            points[region_id],
+            _center_of(above, boxes) if above_reciprocal else None,
+            _center_of(below, boxes),
+        )
+        info[region_id] = {
+            "self": self_hex, "top": top, "bottom": bottom, "line": line,
+            "above": above, "above_reciprocal": above_reciprocal,
+        }
+
+    for region_id in sorted(fills):
+        if draw is not None and region_id not in draw:
+            continue
+        data = info[region_id]
+        self_hex, top, bottom = data["self"], data["top"], data["bottom"]
+        if top == self_hex and bottom == self_hex:
+            result[region_id] = self_hex
+            continue
+        box = boxes[region_id]
+        x1, y1, x2, y2 = data["line"]
+        gradient = ET.SubElement(defs, "linearGradient")
+        gradient.set("id", f"grad-{region_id}")
+        gradient.set("gradientUnits", "userSpaceOnUse")
+        for name, value in (("x1", x1), ("y1", y1), ("x2", x2), ("y2", y2)):
+            gradient.set(name, str(round(value, 2)))
+        stops = (
+            _eased_ramp(0.0, 0.3, top, self_hex)
+            + _eased_ramp(0.7, 1.0, self_hex, bottom)
+        )
+        for offset, color in stops:
+            stop = ET.SubElement(gradient, "stop")
+            stop.set("offset", str(round(offset, 4)))
+            stop.set("stop-color", color)
+        result[region_id] = f"url(#grad-{region_id})"
+
+        if not data["above_reciprocal"] and top != self_hex:
+            # O véu acompanha a cor que o tronco exibe em cada altura: com
+            # peito e abdômen distintos, o peito já chega mesclado na altura
+            # do ombro, e um véu de cor única abriria um corte seco
+            above = data["above"]
+            above_info = info.get(above) if isinstance(above, str) else None
+            center_x = (box[0] + box[2]) / 2.0
+            veil = ET.SubElement(defs, "linearGradient")
+            veil.set("id", f"veil-{region_id}")
+            veil.set("gradientUnits", "userSpaceOnUse")
+            veil.set("x1", str(round(box[0], 2)))
+            veil.set("y1", str(round(box[1], 2)))
+            veil.set("x2", str(round(box[0], 2)))
+            veil.set("y2", str(round(box[1] + (box[3] - box[1]) * 0.55, 2)))
+            for fraction in (0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0):
+                eased = fraction * fraction * (3.0 - 2.0 * fraction)
+                sample_y = box[1] + (box[3] - box[1]) * 0.55 * fraction
+                color = (
+                    _axis_color(above_info, (center_x, sample_y))
+                    if above_info is not None else top
+                )
+                stop = ET.SubElement(veil, "stop")
+                stop.set("offset", str(round(fraction, 4)))
+                stop.set("stop-color", color)
+                stop.set("stop-opacity", str(round(1.0 - eased, 4)))
+            veils[region_id] = f"url(#veil-{region_id})"
+    return result, veils
+
+
 def _compute_ticks(value_min: float, value_max: float, n: int = 5) -> list[float]:
     """Compute ~n evenly spaced values between value_min and value_max for the legend ticks."""
     if value_min == value_max:
@@ -416,11 +725,21 @@ def _build_smooth_svg(
     mask_path.set("stroke-width", seam_w)
     mask_path.set("stroke-linejoin", "round")
 
+    # Recorte pela silhueta externa: a máscara é a união das regiões e pode
+    # transbordar o contorno; o clip garante cor só dentro do corpo
+    if outline_d:
+        clip = ET.SubElement(defs, "clipPath")
+        clip.set("id", "body-clip")
+        clip_path = ET.SubElement(clip, "path")
+        clip_path.set("d", _split_outline_d(outline_d)[0])
+
     _append_background_rect(root, vx, vy, total_w, vh, background)
 
     # Grupo recortado na máscara sólida: nada aqui dentro vaza da silhueta.
     masked_group = ET.SubElement(root, "g")
     masked_group.set("mask", "url(#body-mask)")
+    if outline_d:
+        masked_group.set("clip-path", "url(#body-clip)")
 
     # Camada 1: base (cor de missing) + regiões coloridas por dado, com blur leve.
     blurred_group = ET.SubElement(masked_group, "g")
@@ -433,12 +752,25 @@ def _build_smooth_svg(
     body_base.set("stroke-width", seam_w)
     body_base.set("stroke-linejoin", "round")
 
+    # Regiões sem dado entram no mapa de cores só como vizinhas: a borda das
+    # regiões coloridas se funde com a cor de missing em vez de cortar seco
+    region_fills: dict[str, str] = {}
+    drawn: set[str] = set()
     for elem_id in sorted(base_paths):
         canonical_id, side = _canonical_and_side(elem_id)
         rgb = _color_for(canonical_id, side, heatmap.colors)
         if rgb is None:
-            continue
-        fill = _rgb_to_hex(rgb)
+            region_fills[elem_id] = missing_hex
+        else:
+            region_fills[elem_id] = _rgb_to_hex(rgb)
+            drawn.add(elem_id)
+
+    region_points = {rid: _path_points(d) for rid, d in base_paths.items()}
+    fill_by_region, veils = _region_fill_map(
+        defs, region_fills, region_points, draw=drawn
+    )
+    for elem_id in sorted(drawn):
+        fill = fill_by_region[elem_id]
         path_elem = ET.SubElement(blurred_group, "path")
         path_elem.set("id", elem_id)
         path_elem.set("d", base_paths[elem_id])
@@ -446,6 +778,14 @@ def _build_smooth_svg(
         path_elem.set("stroke", fill)
         path_elem.set("stroke-width", seam_w)
         path_elem.set("stroke-linejoin", "round")
+        # Véu da junção do ombro por cima do preenchimento da região
+        if elem_id in veils:
+            overlay = ET.SubElement(blurred_group, "path")
+            overlay.set("d", base_paths[elem_id])
+            overlay.set("fill", veils[elem_id])
+            overlay.set("stroke", veils[elem_id])
+            overlay.set("stroke-width", seam_w)
+            overlay.set("stroke-linejoin", "round")
 
     # Camada 2: inner-glow frio por cima -- bordas frias em cada região.
     glow_elem = ET.SubElement(masked_group, "path")
@@ -460,7 +800,7 @@ def _build_smooth_svg(
         detail.set("id", "body-outline-detail")
         detail.set("d", outline_d)
         detail.set("fill", "none")
-        detail.set("stroke", "rgba(0,0,0,0.55)")
+        detail.set("stroke", "rgba(0,0,0,0.9)")
         detail.set("stroke-width", str(round(vw * 0.004, 2)))
         detail.set("stroke-linejoin", "round")
 
@@ -695,26 +1035,89 @@ class SvgRenderer:
                     return elem
             return None
 
+        # O contorno vem do SVG base sem fill nem stroke, então herdaria
+        # preenchimento preto e taparia o mapa. Aqui ele vira traço, igual ao
+        # modo suave: grosso só na silhueta externa e fino nos subpaths de
+        # detalhe, senão os detalhes miúdos empastelam num borrão preto
+        body_silhouette_d = None
+        for parent in root.iter():
+            for position, elem in enumerate(list(parent)):
+                if elem.get("id") != "body-outline":
+                    continue
+                silhouette_d, details_d = _split_outline_d(elem.get("d", ""))
+                body_silhouette_d = silhouette_d
+                elem.set("d", silhouette_d)
+                elem.set("fill", "none")
+                elem.set("stroke", "#000000")
+                elem.set("stroke-width", str(round(vw * 0.010, 2)))
+                elem.set("stroke-linejoin", "round")
+                if details_d:
+                    detail = ET.Element("path")
+                    detail.set("id", "body-outline-detail")
+                    detail.set("d", details_d)
+                    detail.set("fill", "none")
+                    detail.set("stroke", "rgba(0,0,0,0.9)")
+                    detail.set("stroke-width", str(round(vw * 0.004, 2)))
+                    detail.set("stroke-linejoin", "round")
+                    parent.insert(position, detail)
+
         regions_group = find_regions_group(root)
         if regions_group is None:
             return ET.tostring(root, encoding="unicode")
 
+        defs = ET.Element("defs")
+
+        # Recorta as regiões na silhueta: cor nenhuma passa do contorno
+        if body_silhouette_d is not None:
+            clip = ET.SubElement(defs, "clipPath")
+            clip.set("id", "body-clip")
+            clip_path = ET.SubElement(clip, "path")
+            clip_path.set("d", body_silhouette_d)
+            regions_group.set("clip-path", "url(#body-clip)")
+
+        # Cor por lado: chave lateralizada (ex.: 'hand_left') senão a canônica
+        fills: dict[str, str] = {}
+        region_points: dict[str, list[tuple[float, float]]] = {}
         for elem in regions_group:
-            if _tag(elem) != "path":
+            if _tag(elem) != "path" or not elem.get("id"):
                 continue
-            elem_id = elem.get("id", "")
-            if not elem_id:
-                continue
-
-            # Cor por lado: chave lateralizada (ex.: 'hand_left') senão a canônica
-            canonical_id, side = _canonical_and_side(elem_id)
+            canonical_id, side = _canonical_and_side(elem.get("id"))
             rgb = _color_for(canonical_id, side, heatmap.colors)
-            fill = _rgb_to_hex(rgb) if rgb is not None else _missing_fill(missing, colormap)
+            fills[elem.get("id")] = (
+                _rgb_to_hex(rgb) if rgb is not None
+                else _missing_fill(missing, colormap)
+            )
+            region_points[elem.get("id")] = _path_points(elem.get("d", "0 0"))
 
-            elem.set("fill", fill)
+        fill_by_region, veils = _region_fill_map(defs, fills, region_points)
+        overlays: list[tuple[int, ET.Element]] = []
+        for position, elem in enumerate(list(regions_group)):
+            elem_id = elem.get("id", "")
+            if elem_id not in fill_by_region:
+                continue
+            elem.set("fill", fill_by_region[elem_id])
+            # Traço da própria cor fecha a fresta de antialiasing entre
+            # regiões vizinhas, que aparece como linha fina na emenda
+            elem.set("stroke", fill_by_region[elem_id])
+            elem.set("stroke-width", str(round(vw * 0.002, 2)))
+            elem.set("stroke-linejoin", "round")
             # Remove atributo style para evitar conflito com o atributo fill
             if "style" in elem.attrib:
                 del elem.attrib["style"]
+            if elem_id in veils:
+                overlay = ET.Element("path")
+                overlay.set("d", elem.get("d", ""))
+                overlay.set("fill", veils[elem_id])
+                # O traço do véu cobre o anel de traço da região por baixo
+                overlay.set("stroke", veils[elem_id])
+                overlay.set("stroke-width", str(round(vw * 0.002, 2)))
+                overlay.set("stroke-linejoin", "round")
+                overlays.append((position + 1, overlay))
+        for position, overlay in reversed(overlays):
+            regions_group.insert(position, overlay)
+
+        if len(defs):
+            root.insert(0, defs)
 
         if legend and colormap is not None:
             _append_legend(root, heatmap, colormap, vx, vy, vw, vh, lang=lang, background=background)

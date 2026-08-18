@@ -899,6 +899,50 @@ class TestSvgRendererNewParams(unittest.TestCase):
         fig = renderer.render(hm, model, base_svg=base_svg, legend=True, colormap=cmap)
         self.assertIn("linearGradient", str(fig))
 
+    def test_flat_outline_splits_silhouette_and_details(self):
+        """Flat mode strokes the silhouette thick and the detail subpaths thin."""
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        model = self._make_model()
+        hm = self._make_heatmap()
+        base_svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900">'
+            '<g id="regions"><path id="head" d="M 0 0 Z" /></g>'
+            '<g id="silhouette">'
+            '<path id="body-outline" d="M 0 0 L 400 0 L 400 900 L 0 900 Z '
+            'M 10 10 L 20 10 L 20 20 Z" />'
+            "</g></svg>"
+        )
+        root = ET.fromstring(str(renderer.render(hm, model, base_svg=base_svg)))
+        outline = next(e for e in root.iter() if e.get("id") == "body-outline")
+        detail = next(e for e in root.iter() if e.get("id") == "body-outline-detail")
+        # A silhueta fica com o subpath maior e o traço grosso
+        self.assertIn("400", outline.get("d"))
+        self.assertEqual(outline.get("stroke-width"), "4.0")
+        self.assertEqual(outline.get("fill"), "none")
+        # O detalhe fica com o subpath menor e o traço fino
+        self.assertIn("M 10 10", detail.get("d"))
+        self.assertEqual(detail.get("stroke-width"), "1.6")
+        self.assertEqual(detail.get("fill"), "none")
+
+    def test_flat_outline_single_subpath_has_no_detail(self):
+        """A single-subpath outline stays whole and adds no detail layer."""
+        from anatomapa.render.svg import SvgRenderer
+        renderer = SvgRenderer()
+        model = self._make_model()
+        hm = self._make_heatmap()
+        base_svg = (
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 900">'
+            '<g id="regions"><path id="head" d="M 0 0 Z" /></g>'
+            '<path id="body-outline" d="M 0 0 L 400 0 L 400 900 L 0 900 Z" />'
+            "</svg>"
+        )
+        root = ET.fromstring(str(renderer.render(hm, model, base_svg=base_svg)))
+        outline = next(e for e in root.iter() if e.get("id") == "body-outline")
+        self.assertEqual(outline.get("stroke-width"), "4.0")
+        details = [e for e in root.iter() if e.get("id") == "body-outline-detail"]
+        self.assertEqual(details, [])
+
     def test_render_smooth_requires_colormap_and_base_svg(self):
         # smooth=True sem colormap nem base_svg cai no ramo _render_from_model
         from anatomapa.render.svg import SvgRenderer

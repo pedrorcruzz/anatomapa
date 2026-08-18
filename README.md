@@ -88,8 +88,8 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `view`       | `"anterior"`, `"posterior"`, `"both"`                          | `"anterior"`    | Frente, costas, ou as duas lado a lado com uma legenda só |
 | `body`       | `"male"`, `"female"`                                           | `"male"`        | Corpo masculino ou feminino |
 | `lang`       | `"pt"`, `"en"`                                                 | `"pt"`          | Idioma dos rótulos escritos no SVG |
-| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Saída; png/jpg/jpeg pedem `pip install anatomapa[raster]` |
-| `title`      | `str` ou `None`                                                | `None`          | Título desenhado na figura |
+| `format`     | `"svg"`, `"png"`, `"jpg"`, `"jpeg"`                            | `"svg"`         | Padrão quando o caminho salvo não tem extensão; png/jpg/jpeg pedem o extra `raster` |
+| `title`      | `str` ou `None`                                                | `None`          | Opcional: só desenha o título se for informado |
 | `background` | `"dark"`, `"light"`, `"transparent"`                           | `"transparent"` | Fundo da figura |
 | `on_unknown` | `"error"`, `"skip"`, `"warn"`                                  | `"error"`       | O que fazer com nome não reconhecido |
 | `region_map` | `dict {seu rótulo: id da região}`                              | `None`          | De-para de nomes seus; tem precedência |
@@ -110,14 +110,17 @@ Retorna um objeto [`Figure`](#saída-o-objeto-figure). Nome de região desconhec
 (azul frio para laranja quente, visual de câmera térmica); não há escolha de paleta. A escala
 de intensidade é sempre **linear**: a cor cresce proporcional ao valor.
 
-## Fundo
+## Fundo e título
 
 - **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão, sem
   fundo). As cores da legenda se adaptam ao fundo escolhido.
+- **`title`**: quando informado, sai em negrito e centralizado numa faixa acima do desenho; o
+  viewBox cresce só para cima, sem mudar a largura, a cor do texto acompanha o fundo e título longo
+  encolhe a fonte para caber. Vale em qualquer `view` (com `split=True`, cada figura recebe o
+  título) e segue também como `<title>` do SVG. `None` (padrão) não desenha nada nem reserva espaço.
 
-A **legenda** com a barra de valores (mín..máx, rótulo conforme `lang`) e o **degradê térmico
-contínuo** sobre o corpo são nativos: sempre presentes, sem parâmetro. É a legenda que informa
-os valores do mapa. Ex.: `am.heatmap(dados, background="dark")`.
+A **legenda** (barra de valores mín..máx, rótulo conforme `lang`) e o **degradê térmico** sobre
+o corpo são nativos: sempre presentes, sem parâmetro. Ex.: `am.heatmap(dados, background="dark")`.
 
 ## Nomes de região
 
@@ -210,7 +213,7 @@ ocorrências de cada região e `"sum"` soma os valores. `None` (padrão) espera 
 
 | Uso              | Resultado |
 |------------------|-----------|
-| `fig.save("mapa.svg")` | grava o arquivo; infere o formato pela extensão (`.svg`, `.png`, `.jpg`), usa o `format` do heatmap ou aceita `fig.save(caminho, format="png")` |
+| `fig.save("mapa.svg")` | grava o arquivo; a extensão do caminho (`.svg`, `.png`, `.jpg`) decide o formato, `fig.save(caminho, format="png")` força outro e, sem extensão, vale o `format` do heatmap |
 | `fig.to_svg()`   | devolve o SVG como `str` |
 | `fig.to_png()`   | devolve o PNG como `bytes` (pede `anatomapa[raster]`) |
 | `fig.to_jpeg()`  | devolve o JPEG como `bytes` (pede `anatomapa[raster]`) |
@@ -219,14 +222,11 @@ ocorrências de cada região e `"sum"` soma os valores. `None` (padrão) espera 
 
 Pra saída **raster** (PNG/JPG/JPEG), instale o extra opcional `pip install anatomapa[raster]`
 (traz cairosvg e Pillow, importados só sob demanda; o núcleo segue zero dependências e o SVG
-puro nunca precisa de extra). O raster usa gradientes por região que se mesclam com as regiões
-vizinhas, então o visual térmico sai igual em qualquer formato. Sem o extra instalado, pedir
-png/jpg/jpeg levanta `ImportError` com a dica de instalação:
-
-```python
-fig = am.heatmap(dados, format="png")
-fig.save("mapa.png")
-```
+puro nunca precisa de extra). Qualquer figura rasteriza certo: na hora de virar PNG/JPG ela usa
+uma variante sem os filtros SVG (que os conversores raster não implementam), gerada sob demanda,
+então `am.heatmap(dados).save("mapa.png")`, `to_png()`, `to_jpeg()` e `format="png"` produzem a
+mesma imagem, com as mesmas cores e o mesmo visual térmico. Sem o extra instalado, pedir
+png/jpg/jpeg levanta `ImportError` com a dica de instalação.
 
 ## Exemplo completo
 

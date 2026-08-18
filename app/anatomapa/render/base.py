@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Protocol
+from typing import Callable, Protocol
 
 from anatomapa.domain.heatmap import Heatmap
 from anatomapa.domain.model import AnatomicalModel
@@ -18,9 +18,29 @@ class Figure:
     (``pip install anatomapa[raster]``).
     """
 
-    def __init__(self, svg: str, format: str = "svg") -> None:
+    def __init__(
+        self,
+        svg: str,
+        format: str = "svg",
+        raster_svg: Callable[[], str] | None = None,
+    ) -> None:
         self._svg = svg
         self._format = format.lower()
+        self._raster_svg = raster_svg
+        self._raster_cache: str | None = None
+
+    def _svg_for_raster(self) -> str:
+        """SVG actually handed to the rasteriser.
+
+        Raster converters do not implement SVG filters, so the filtered thermal
+        blend would come out as a blank body. When the figure carries a
+        filter-free variant, it is built once, on first use, and reused.
+        """
+        if self._raster_svg is None:
+            return self._svg
+        if self._raster_cache is None:
+            self._raster_cache = self._raster_svg()
+        return self._raster_cache
 
     def to_svg(self) -> str:
         """Return the SVG content as a string."""
@@ -38,13 +58,15 @@ class Figure:
         """Render the figure to PNG bytes. Requires the ``raster`` extra."""
         from anatomapa.render.raster import svg_to_png
 
-        return svg_to_png(self._svg, scale=scale)
+        return svg_to_png(self._svg_for_raster(), scale=scale)
 
     def to_jpeg(self, quality: int = 90, scale: float = 2.0) -> bytes:
         """Render the figure to JPEG bytes. Requires the ``raster`` extra."""
         from anatomapa.render.raster import png_to_jpeg, svg_to_png
 
-        return png_to_jpeg(svg_to_png(self._svg, scale=scale), quality=quality)
+        return png_to_jpeg(
+            svg_to_png(self._svg_for_raster(), scale=scale), quality=quality
+        )
 
     def save(self, path: str | os.PathLike, format: str | None = None) -> None:
         """Write the figure to a file.

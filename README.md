@@ -21,6 +21,7 @@
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=ffdd54" />
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-green" />
   <img alt="zero dependencies" src="https://img.shields.io/badge/dependencies-zero%20(stdlib%20only)-orange" />
+  <a href="https://doi.org/10.5281/zenodo.22017924"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.22017924.svg" /></a>
 </p>
 
 <p align="center">
@@ -282,6 +283,25 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos-en.png?v=6" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=6" alt="Male and female anatomical model" width="420" />
 </p>
+
+## Citation
+
+Every release is archived on Zenodo with a permanent DOI. Cite the concept DOI below: it
+always resolves to the latest archived version.
+
+```bibtex
+@software{rosa_anatomapa,
+  author    = {Rosa, Pedro and Reis, Marcelo and Melo, Mozart},
+  title     = {anatomapa: a Python library for anatomical heatmaps
+               of the human body surface},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.22017924},
+  url       = {https://doi.org/10.5281/zenodo.22017924}
+}
+```
+
+GitHub also generates the citation for you: use the **Cite this repository** button in the
+sidebar, backed by [`CITATION.cff`](https://github.com/pedrorcruzz/anatomapa/blob/main/CITATION.cff).
 
 ## License and attribution
 

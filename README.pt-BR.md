@@ -21,6 +21,7 @@
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=ffdd54" />
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-green" />
   <img alt="zero dependencies" src="https://img.shields.io/badge/depend%C3%AAncias-zero%20(s%C3%B3%20stdlib)-orange" />
+  <a href="https://doi.org/10.5281/zenodo.22017924"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.22017924.svg" /></a>
 </p>
 
 <p align="center">
@@ -282,6 +283,33 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=6" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=6" alt="Modelo anatômico masculino e feminino" width="420" />
 </p>
+
+## Como citar
+
+Toda release é arquivada no Zenodo com um DOI permanente. Cite o concept DOI abaixo, que
+sempre resolve para a versão mais recente arquivada.
+
+**ABNT:**
+
+> ROSA, Pedro; REIS, Marcelo; MELO, Mozart. **anatomapa**: a Python library for anatomical
+> heatmaps of the human body surface. Zenodo. DOI: 10.5281/zenodo.22017924. Disponível em:
+> https://doi.org/10.5281/zenodo.22017924.
+
+**BibTeX:**
+
+```bibtex
+@software{rosa_anatomapa,
+  author    = {Rosa, Pedro and Reis, Marcelo and Melo, Mozart},
+  title     = {anatomapa: a Python library for anatomical heatmaps
+               of the human body surface},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.22017924},
+  url       = {https://doi.org/10.5281/zenodo.22017924}
+}
+```
+
+O GitHub também gera a citação pronta: use o botão **Cite this repository** na barra
+lateral, alimentado pelo [`CITATION.cff`](https://github.com/pedrorcruzz/anatomapa/blob/main/CITATION.cff).
 
 ## Licença e atribuição
 

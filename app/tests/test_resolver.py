@@ -1,9 +1,20 @@
 """Tests for strict resolution: only exact ids and the user's region_map."""
 import unittest
+import warnings
 
 from anatomapa.domain.model import AnatomicalModel
 from anatomapa.domain.region import Region
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
+
+
+def setUpModule():
+    """Silence the 0.4 meaning-change notice: these fixtures use the old ids on purpose."""
+    warnings.filterwarnings(
+        "ignore",
+        message="'(leg|arm)' agora é o membro",
+        category=DeprecationWarning,
+    )
+
 
 
 def _make_model() -> AnatomicalModel:

@@ -218,9 +218,9 @@ cada região, a lib sobe pela árvore e usa o primeiro ancestral com valor. Trê
 O caso real de perícia, um lado no geral e o outro em detalhe, é o terceiro dos [Exemplos rápidos](#exemplos-rápidos).
 
 **Migrando da 0.3 (quebras).** `leg` era a panturrilha (agora `lower_leg`) e `arm` era o braço
-acima do cotovelo (agora `upper_arm`); hoje são os membros inteiros, e usá-los emite
-`DeprecationWarning` apontando a sua linha e o id novo, porque o código antigo roda pintando
-outra coisa. `pelvis` virou `hip`, filho de `leg`; `buttocks` também mudou para `leg`, então
+acima do cotovelo (agora `upper_arm`); hoje são os membros inteiros. Desde a 0.4.0 não há mais
+aviso em tempo de execução: o código antigo roda em silêncio pintando outra coisa, então confira
+seus usos antes de atualizar. `pelvis` virou `hip`, filho de `leg`; `buttocks` também mudou para `leg`, então
 valor em `trunk` não pinta mais as nádegas. `chest`, `abdomen` e `back` viraram agregadores.
 
 **Região sem dado** sai nativamente em **cinza neutro** (#9aa0a6), distinto do frio: "sem

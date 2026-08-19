@@ -21,7 +21,7 @@ from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
 from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 from anatomapa.usecases.build import build_heatmap as _build_heatmap
 
-__version__ = "0.3.9"
+__version__ = "0.4.0"
 __all__ = [
     "heatmap",
     "validate",

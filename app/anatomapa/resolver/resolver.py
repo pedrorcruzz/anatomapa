@@ -1,11 +1,63 @@
 from __future__ import annotations
 
 import difflib
+import os
+import sys
+import warnings
 from collections.abc import Mapping
 
 from anatomapa.domain.model import AnatomicalModel
 
 _SIDES = ("left", "right")
+
+# Ids que mudaram de significado na 0.4: continuam válidos, mas pintam outra
+# coisa. O aviso sai enquanto durar a 0.4 e some na 0.5.
+_RENAMED_MEANING = {
+    "leg": (
+        "'leg' agora é o membro inferior inteiro (quadril, coxa, joelho, "
+        "perna, tornozelo e pé). Se você queria só a panturrilha, use "
+        "'lower_leg'."
+    ),
+    "arm": (
+        "'arm' agora é o membro superior inteiro (ombro, braço, cotovelo, "
+        "antebraço, punho, mão e dedos). Se você queria só o braço acima do "
+        "cotovelo, use 'upper_arm'."
+    ),
+}
+
+
+def _user_stacklevel() -> int:
+    """Depth of the first frame outside the package, for `warnings.warn`.
+
+    A fixed stacklevel would point at a line of the library, because the number
+    of internal frames differs between `heatmap()` and `validate()`. Walking out
+    to the caller's own frame makes the warning show the line the user has to
+    change.
+    """
+    package = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    level = 1
+    frame = sys._getframe(1)
+    while frame is not None:
+        if not os.path.abspath(frame.f_code.co_filename).startswith(package):
+            return level
+        level += 1
+        frame = frame.f_back
+    return level
+
+
+def _warn_changed_meaning(region_keys: list[str]) -> None:
+    """Warn once per call for ids whose meaning changed in 0.4."""
+    seen = {
+        key.rpartition("_")[0] if key.endswith(_SIDES) else key
+        for key in region_keys
+    }
+    stacklevel = _user_stacklevel()
+    for region_id in sorted(seen & _RENAMED_MEANING.keys()):
+        warnings.warn(
+            f"{_RENAMED_MEANING[region_id]} Este aviso sai na versão 0.5.",
+            DeprecationWarning,
+            stacklevel=stacklevel,
+        )
 
 
 class ResolutionError(ValueError):
@@ -123,6 +175,7 @@ def analyze(
             "suggestions": suggestions,
         }
 
+    _warn_changed_meaning(list(resolved.values()))
     return {"resolved": resolved, "unresolved": unresolved}
 
 

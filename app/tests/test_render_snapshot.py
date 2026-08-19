@@ -5,6 +5,17 @@ Skipped when assets are absent.
 
 import os
 import unittest
+import warnings
+
+
+def setUpModule():
+    """Silence the 0.4 meaning-change notice: these fixtures use the old ids on purpose."""
+    warnings.filterwarnings(
+        "ignore",
+        message="'(leg|arm)' agora é o membro",
+        category=DeprecationWarning,
+    )
+
 
 _ASSETS_DIR = os.path.join(
     os.path.dirname(__file__), "..", "anatomapa", "assets"

@@ -37,18 +37,18 @@ class TestViewParameter(unittest.TestCase):
         self.assertIn("view", str(ctx.exception))
 
     def test_anterior_has_front_trunk_regions(self):
-        ids = _ids(str(am.heatmap({"chest": 5, "abdomen": 3, "pelvis": 1})))
-        self.assertIn("chest", ids)
-        self.assertIn("abdomen", ids)
-        self.assertNotIn("back", ids)
-        self.assertNotIn("buttocks", ids)
+        ids = _ids(str(am.heatmap({"chest": 5, "abdomen": 3, "hip": 1})))
+        self.assertIn("upper_chest-left", ids)
+        self.assertIn("lower_abdomen-right", ids)
+        self.assertNotIn("upper_back-left", ids)
+        self.assertNotIn("buttocks-left", ids)
 
     def test_posterior_has_back_trunk_regions(self):
         ids = _ids(str(am.heatmap({"back": 5, "buttocks": 1}, view="posterior")))
-        self.assertIn("back", ids)
-        self.assertIn("buttocks", ids)
-        self.assertNotIn("chest", ids)
-        self.assertNotIn("abdomen", ids)
+        self.assertIn("upper_back-left", ids)
+        self.assertIn("buttocks-right", ids)
+        self.assertNotIn("upper_chest-left", ids)
+        self.assertNotIn("lower_abdomen-left", ids)
 
     def test_posterior_accepts_shared_regions(self):
         svg = str(am.heatmap({Region.HAND: 10, Region.FOOT: 20}, view="posterior"))
@@ -62,7 +62,7 @@ class TestViewParameter(unittest.TestCase):
 
     def test_female_posterior_renders(self):
         svg = str(am.heatmap({"back": 4}, view="posterior", body="female"))
-        self.assertIn("back", _ids(svg))
+        self.assertIn("upper_back-left", _ids(svg))
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
@@ -82,9 +82,10 @@ class TestBothViews(unittest.TestCase):
 
     def test_front_and_back_trunk_regions_both_present(self):
         ids = _ids(self.svg)
-        self.assertIn("anterior-chest", ids)
-        self.assertIn("posterior-back", ids)
-        self.assertIn("posterior-buttocks", ids)
+        self.assertIn("anterior-upper_chest-left", ids)
+        self.assertIn("posterior-upper_back-left", ids)
+        # nádegas pendem do membro inferior, não do tronco
+        self.assertNotIn("posterior-buttocks-right", ids)
 
     def test_single_legend_and_background(self):
         self.assertEqual(self.svg.count('id="legend-bar"'), 1)
@@ -134,8 +135,8 @@ class TestSplitParameter(unittest.TestCase):
             {"hand": 5, "buttocks": 2}, view="both", split=True
         )
         self.assertIn("hand-left", _ids(str(anterior)))
-        self.assertIn("buttocks", _ids(str(posterior)))
-        self.assertNotIn("buttocks", _ids(str(anterior)))
+        self.assertIn("buttocks-left", _ids(str(posterior)))
+        self.assertNotIn("buttocks-left", _ids(str(anterior)))
 
     def test_split_figures_have_own_legend_and_no_prefix(self):
         anterior, posterior = am.heatmap({"hand": 5}, view="both", split=True)
@@ -190,22 +191,22 @@ class TestHeatmapOverloads(unittest.TestCase):
 class TestListRegionsPerView(unittest.TestCase):
     def test_lists_every_region_by_default(self):
         ids = {r["id"] for r in am.list_regions()}
-        self.assertIn("chest", ids)
-        self.assertIn("back", ids)
+        self.assertIn("upper_chest", ids)
+        self.assertIn("upper_back", ids)
         self.assertIn("buttocks", ids)
 
     def test_anterior_hides_back_regions(self):
         ids = {r["id"] for r in am.list_regions(view="anterior")}
-        self.assertIn("chest", ids)
-        self.assertNotIn("back", ids)
+        self.assertIn("upper_chest", ids)
+        self.assertNotIn("upper_back", ids)
         self.assertNotIn("buttocks", ids)
 
     def test_posterior_hides_front_regions(self):
         ids = {r["id"] for r in am.list_regions(view="posterior")}
-        self.assertIn("back", ids)
+        self.assertIn("upper_back", ids)
         self.assertIn("buttocks", ids)
-        self.assertNotIn("chest", ids)
-        self.assertNotIn("pelvis", ids)
+        self.assertNotIn("upper_chest", ids)
+        self.assertNotIn("hip", ids)
 
     def test_aggregator_appears_in_both_views(self):
         for view in ("anterior", "posterior"):
@@ -214,9 +215,10 @@ class TestListRegionsPerView(unittest.TestCase):
 
     def test_views_field_is_exposed(self):
         by_id = {r["id"]: r for r in am.list_regions()}
-        self.assertEqual(by_id["chest"]["views"], ["anterior"])
-        self.assertEqual(by_id["back"]["views"], ["posterior"])
+        self.assertEqual(by_id["upper_chest"]["views"], ["anterior"])
+        self.assertEqual(by_id["upper_back"]["views"], ["posterior"])
         self.assertEqual(by_id["trunk"]["views"], [])
+        self.assertEqual(by_id["chest"]["views"], [])
         self.assertIn("anterior", by_id["hand"]["views"])
         self.assertIn("posterior", by_id["hand"]["views"])
 

@@ -100,7 +100,8 @@ class TestRegionMapAcceptsEnumValues(unittest.TestCase):
         import anatomapa
         from anatomapa.regions import Region
         fig = anatomapa.heatmap({"CABEÇA": 10}, region_map={"CABEÇA": Region.HEAD})
-        self.assertIn("head", str(fig))
+        # head é agregadora: quem desenha são os filhos face e pescoço
+        self.assertIn("face-left", str(fig))
 
     def test_validate_accepts_enum_values_in_region_map(self):
         import anatomapa

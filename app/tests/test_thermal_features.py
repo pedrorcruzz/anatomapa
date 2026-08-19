@@ -12,7 +12,18 @@ Covers:
 
 import os
 import unittest
+import warnings
 import xml.etree.ElementTree as ET
+
+
+def setUpModule():
+    """Silence the 0.4 meaning-change notice: these fixtures use the old ids on purpose."""
+    warnings.filterwarnings(
+        "ignore",
+        message="'(leg|arm)' agora é o membro",
+        category=DeprecationWarning,
+    )
+
 
 _ASSETS_DIR = os.path.join(
     os.path.dirname(__file__), "..", "anatomapa", "assets"
@@ -344,14 +355,14 @@ class TestSmoothMode(unittest.TestCase):
                 blurred_group = e
                 break
         self.assertIsNotNone(blurred_group, "Grupo blurred nao encontrado")
-        # Paths com id contendo "head" devem ter stroke == fill (fill+stroke identicos)
+        # head é agregadora: quem desenha é face, que herda o valor dela
         head_paths = [
             p for p in blurred_group
-            if _tag(p) == "path" and "head" in p.get("id", "")
+            if _tag(p) == "path" and "face" in p.get("id", "")
         ]
-        self.assertGreater(len(head_paths), 0, "Nenhum path de head encontrado")
+        self.assertGreater(len(head_paths), 0, "Nenhum path de face encontrado")
         for p in head_paths:
-            self.assertNotEqual(p.get("fill"), cold_hex, "Head deveria ter cor quente")
+            self.assertNotEqual(p.get("fill"), cold_hex, "Face deveria ter cor quente")
             self.assertEqual(
                 p.get("fill"), p.get("stroke"),
                 f"stroke deve igualar fill no path {p.get('id')}",
@@ -1096,6 +1107,74 @@ class TestBackgroundParameter(unittest.TestCase):
         label = next((e for e in root.iter() if e.get("id") == "legend-label"), None)
         self.assertIsNotNone(label)
         self.assertEqual(label.get("fill"), "#f2f2f2")
+
+
+
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+class TestJunctionVeil(unittest.TestCase):
+    """The deltoid meets the trunk at a right angle and needs an extra veil.
+
+    A single gradient direction cannot align with both borders of a junction
+    region, so the renderer paints an overlay fading from the neighbour colour.
+    It only appears when the junction and the trunk really differ in colour.
+    """
+
+    def test_shoulder_gets_a_veil_when_it_differs_from_the_chest(self):
+        import anatomapa
+
+        svg = str(anatomapa.heatmap({"shoulder": 100, "upper_chest": 1}))
+        self.assertIn("veil-shoulder-left", svg)
+        self.assertIn("veil-shoulder-right", svg)
+
+    def test_veil_also_exists_in_flat_mode(self):
+        import anatomapa
+
+        # PNG sai em degradê chapado, sem filtro SVG, mas a junção continua
+        flat = anatomapa.heatmap(
+            {"shoulder": 100, "upper_chest": 1}, format="png"
+        ).to_svg()
+        self.assertIn("veil-shoulder-left", flat)
+        self.assertNotIn("filter=", flat)
+
+    def test_no_veil_when_the_colours_match(self):
+        import anatomapa
+
+        # trunk pinta ombro e peito com a mesma cor: nada a disfarçar
+        svg = str(anatomapa.heatmap({"trunk": 10}))
+        self.assertNotIn("veil-shoulder", svg)
+
+
+
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+class TestGlowSeam(unittest.TestCase):
+    """The cold inner glow must carry the same seam stroke as the body mask.
+
+    The source drawing leaves hairline gaps between some paths (hand against
+    forearm, foot against leg). The mask closes them with a stroke; without the
+    same stroke on the glow, each gap became a bright line crossing the limb,
+    because the edge darkening simply did not reach there.
+    """
+
+    def _glow(self, svg: str):
+        root = ET.fromstring(svg)
+        return next(
+            e for e in root.iter()
+            if _tag(e) == "path" and "inner-glow" in (e.get("filter") or "")
+        )
+
+    def test_glow_has_the_same_seam_as_the_mask(self):
+        import anatomapa
+
+        svg = str(anatomapa.heatmap({"arm": 50, "trunk": 90}))
+        root = ET.fromstring(svg)
+        mask = next(
+            e for e in root.iter()
+            if _tag(e) == "mask" and e.get("id") == "body-mask"
+        )
+        mask_path = next(e for e in mask if _tag(e) == "path")
+        glow = self._glow(svg)
+        self.assertEqual(glow.get("stroke-width"), mask_path.get("stroke-width"))
+        self.assertEqual(glow.get("stroke"), "white")
 
 
 if __name__ == "__main__":

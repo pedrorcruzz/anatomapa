@@ -169,43 +169,43 @@ am.heatmap(data, region_map={"HAND": Region.HAND, "FOREARM": Region.FOREARM})
 
 ## Regions and hierarchy
 
-There are **32 regions** in a tree up to 3 levels deep. An **aggregator** region has no drawing
-of its own: a value on it flows down to its children. In parentheses, where each region draws:
+There are **32 regions** in a tree up to 3 levels deep; the **Inside of** column shows each region's parent.
+A row with no mark under Front or Back is an **aggregator**: it draws nothing, and a value on it flows down to its children.
 
-```text
-head           Head (aggregator)
-├─ face            Face (front)
-├─ skull           Skull (back)
-└─ neck            Neck (front and back)
-trunk          Trunk (aggregator)
-├─ shoulder        Shoulder (front and back)
-├─ chest           Chest (aggregator)
-│  ├─ upper_chest      Upper chest (front)
-│  └─ lower_chest      Lower chest (front)
-├─ abdomen         Abdomen (aggregator)
-│  ├─ upper_abdomen    Upper abdomen (front)
-│  └─ lower_abdomen    Lower abdomen (front)
-├─ back            Back (aggregator)
-│  ├─ upper_back       Upper back (back)
-│  └─ lower_back       Lower back (back)
-└─ genital         Genital area (front; the only central one)
-arm            Upper limb (aggregator)
-├─ upper_arm       Upper arm (front and back)
-├─ elbow           Elbow (front and back)
-├─ forearm         Forearm (front and back)
-├─ wrist           Wrist (front and back)
-└─ hand            Hand (front and back)
-   └─ finger           Fingers (front and back)
-leg            Lower limb (aggregator)
-├─ hip             Hip (front)
-├─ buttocks        Buttocks (back)
-├─ thigh           Thigh (front and back)
-├─ knee            Knee (front and back)
-├─ lower_leg       Lower leg (front and back)
-├─ ankle           Ankle (front and back)
-└─ foot            Foot (front and back)
-   └─ toe              Toes (front and back)
-```
+| Id | Region | Inside of | Front | Back |
+|----|--------|-----------|:-----:|:----:|
+| `head` | Head | root |  |  |
+| `face` | Face | `head` | ✓ |  |
+| `skull` | Skull | `head` |  | ✓ |
+| `neck` | Neck | `head` | ✓ | ✓ |
+| `trunk` | Trunk | root |  |  |
+| `shoulder` | Shoulder | `trunk` | ✓ | ✓ |
+| `chest` | Chest | `trunk` |  |  |
+| `upper_chest` | Upper chest | `chest` | ✓ |  |
+| `lower_chest` | Lower chest | `chest` | ✓ |  |
+| `abdomen` | Abdomen | `trunk` |  |  |
+| `upper_abdomen` | Upper abdomen | `abdomen` | ✓ |  |
+| `lower_abdomen` | Lower abdomen | `abdomen` | ✓ |  |
+| `back` | Back | `trunk` |  |  |
+| `upper_back` | Upper back | `back` |  | ✓ |
+| `lower_back` | Lower back | `back` |  | ✓ |
+| `genital` | Genital region | `trunk` | ✓ |  |
+| `arm` | Upper limb | root |  |  |
+| `upper_arm` | Upper arm | `arm` | ✓ | ✓ |
+| `elbow` | Elbow | `arm` | ✓ | ✓ |
+| `forearm` | Forearm | `arm` | ✓ | ✓ |
+| `wrist` | Wrist | `arm` | ✓ | ✓ |
+| `hand` | Hand | `arm` | ✓ | ✓ |
+| `finger` | Fingers | `hand` | ✓ | ✓ |
+| `leg` | Lower limb | root |  |  |
+| `hip` | Hip | `leg` | ✓ |  |
+| `buttocks` | Buttocks | `leg` |  | ✓ |
+| `thigh` | Thigh | `leg` | ✓ | ✓ |
+| `knee` | Knee | `leg` | ✓ | ✓ |
+| `lower_leg` | Lower leg | `leg` | ✓ | ✓ |
+| `ankle` | Ankle | `leg` | ✓ | ✓ |
+| `foot` | Foot | `leg` | ✓ | ✓ |
+| `toe` | Toes | `foot` | ✓ | ✓ |
 
 **Inheritance (rollup), side-aware.** Send data at whatever level you have. To paint each
 region, the library walks up the tree and uses the first ancestor holding a value. Three rules:

@@ -18,7 +18,11 @@ _ASSETS_EXIST = os.path.exists(os.path.join(_ASSETS_DIR, "body_male_anterior.svg
 
 
 class _FakeImg:
-    """Fake image exposing the minimum surface png_to_jpeg uses."""
+    """Fake image exposing the surface the raster pipeline touches.
+
+    Enough to exercise the library's own compositing logic: blur, alpha mask,
+    cold glow and layer order. The pixel maths is Pillow's business.
+    """
 
     def __init__(self, size=(4, 4)):
         self.size = size
@@ -32,12 +36,28 @@ class _FakeImg:
     def paste(self, im, mask=None):
         self._pasted = True
 
+    def filter(self, kernel):
+        return self
+
+    def getchannel(self, band):
+        return self
+
+    def putalpha(self, band):
+        self._alpha = band
+
+    def alpha_composite(self, other):
+        self._composited = True
+
     def save(self, fp, format=None, quality=None):
+        if (format or "").upper() == "PNG":
+            fp.write(b"PNG:fake")
+            return
         fp.write(b"JPEG-DATA:" + (format or "").encode() + str(quality).encode())
 
 
 def _install_fakes():
-    saved = {name: sys.modules.get(name) for name in ("cairosvg", "PIL", "PIL.Image")}
+    names = ("cairosvg", "PIL", "PIL.Image", "PIL.ImageChops", "PIL.ImageFilter")
+    saved = {name: sys.modules.get(name) for name in names}
 
     cairo = types.ModuleType("cairosvg")
     cairo.svg2png = lambda bytestring=None, scale=1.0: b"PNG:" + bytestring[:4] + bytes([int(scale)])
@@ -47,9 +67,20 @@ def _install_fakes():
     image = types.ModuleType("PIL.Image")
     image.open = lambda fp: _FakeImg()
     image.new = lambda mode, size, color: _FakeImg(size)
+    chops = types.ModuleType("PIL.ImageChops")
+    chops.invert = lambda im: im
+    chops.multiply = lambda a, b: a
+
+    filters = types.ModuleType("PIL.ImageFilter")
+    filters.GaussianBlur = lambda radius: ("blur", radius)
+
     pil.Image = image
+    pil.ImageChops = chops
+    pil.ImageFilter = filters
     sys.modules["PIL"] = pil
     sys.modules["PIL.Image"] = image
+    sys.modules["PIL.ImageChops"] = chops
+    sys.modules["PIL.ImageFilter"] = filters
     return saved
 
 
@@ -219,6 +250,72 @@ class TestSaveSvgDefault(unittest.TestCase):
             Figure("<svg>x</svg>").save(path)
             with open(path, encoding="utf-8") as fh:
                 self.assertIn("<svg>x</svg>", fh.read())
+
+
+
+@unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
+class TestRasterBlend(unittest.TestCase):
+    """The raster output must rebuild the thermal blend the SVG filter makes.
+
+    Converters ignore SVG filters, so a plain conversion loses the blur and
+    turns every hairline gap of the source drawing into a white band. The
+    pipeline therefore splits the figure into layers, blurs the colour one and
+    puts the crisp outline back on top.
+    """
+
+    def setUp(self):
+        self._saved = _install_fakes()
+        self._svgs = []
+        import cairosvg
+
+        original = cairosvg.svg2png
+
+        def spy(bytestring=None, scale=1.0):
+            self._svgs.append(bytestring.decode("utf-8"))
+            return original(bytestring=bytestring, scale=scale)
+
+        cairosvg.svg2png = spy
+
+    def tearDown(self):
+        _restore(self._saved)
+
+    def _render(self):
+        import anatomapa
+
+        anatomapa.heatmap({"head": 10}, format="png").to_png()
+        return self._svgs
+
+    def test_splits_the_figure_into_layers(self):
+        camadas = self._render()
+        self.assertEqual(len(camadas), 4, "cor, nítida, fundo e máscara")
+
+    def test_colour_layer_has_regions_without_the_outline(self):
+        cor = self._render()[0]
+        self.assertIn('id="regions"', cor)
+        self.assertNotIn('id="body-outline"', cor)
+
+    def test_crisp_layer_has_the_outline_without_the_regions(self):
+        nitida = self._render()[1]
+        self.assertIn('id="body-outline"', nitida)
+        self.assertNotIn('id="regions"', nitida)
+
+    def test_mask_layer_is_the_silhouette_alone(self):
+        mascara = self._render()[3]
+        self.assertIn('fill="white"', mascara)
+        self.assertIn('fill="black"', mascara)
+        self.assertNotIn('id="regions"', mascara)
+
+    def test_bodyless_svg_skips_the_blend(self):
+        from anatomapa.render.raster import svg_to_png
+
+        out = svg_to_png("<svg/>", scale=2.0)
+        self.assertTrue(out.startswith(b"PNG:"))
+        self.assertEqual(len(self._svgs), 1, "uma conversão só, sem camadas")
+
+    def test_broken_svg_falls_back_instead_of_raising(self):
+        from anatomapa.render.raster import svg_to_png
+
+        self.assertTrue(svg_to_png("<svg", scale=1.0).startswith(b"PNG:"))
 
 
 if __name__ == "__main__":

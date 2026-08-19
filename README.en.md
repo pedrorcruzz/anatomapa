@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=3" width="120" alt="anatomapa" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=4" width="120" alt="anatomapa" />
 </p>
 
 <h1 align="center">anatomapa</h1>
@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=3" alt="Male and female anatomical heatmap with legend" width="720" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=4" alt="Male and female anatomical heatmap with legend" width="720" />
 </p>
 
 <br>
@@ -80,7 +80,7 @@ am.heatmap({
 
 A dict with three regions is enough. A region with no value comes out in neutral grey,
 meaning "no data", not "low value"; and a hand with no side suffix paints both hands.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=3" alt="Map with upper chest, hands and knees colored and everything else in grey" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=4" alt="Map with upper chest, hands and knees colored and everything else in grey" width="340" /></p>
 
 ```python
 am.heatmap(
@@ -91,7 +91,7 @@ am.heatmap(
 
 `leg` is the whole lower limb: a single value flows down to buttocks, thigh, knee, lower
 leg, ankle, foot and toes. Inheritance in action: send data at whatever level you have.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=3" alt="Posterior view with the whole lower limb hot and the upper back cooler" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=4" alt="Posterior view with the whole lower limb hot and the upper back cooler" width="340" /></p>
 
 ```python
 am.heatmap({
@@ -106,7 +106,7 @@ am.heatmap({
 One side as a whole, the other in detail, in the same call. On the right everything comes out
 at 80; on the left only what was declared paints, and the toes inherit 40 from the foot, their
 closest ancestor. The left hip gets no value and stays unpainted: whoever details a side owns covering it all.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=3" alt="Uniform right side and left side detailed segment by segment" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=4" alt="Uniform right side and left side detailed segment by segment" width="340" /></p>
 
 ## `heatmap()` parameters
 
@@ -279,8 +279,8 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 ## Gallery
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=3" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=3" alt="Male and female anatomical model" width="420" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=4" alt="Same map over dark, light and transparent backgrounds, male and female" width="640" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=4" alt="Male and female anatomical model" width="420" />
 </p>
 
 ## License and attribution

@@ -3,7 +3,7 @@
 Covers the resolution rule: walking up from a region, the first ancestor with a
 value wins, and on each step the lateralised key beats the plain one. Also
 covers the legend range, which must ignore a value that ends up painting
-nothing, and the deprecation warning for the ids whose meaning changed in 0.4.
+nothing, and the deprecation warning for the ids whose meaning changed in 0.3.8.
 """
 
 import os
@@ -139,7 +139,7 @@ class TestLegendRange(unittest.TestCase):
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes")
 class TestChangedMeaningWarning(unittest.TestCase):
-    """`leg` and `arm` changed meaning in 0.4 and must say so out loud."""
+    """`leg` and `arm` changed meaning in 0.3.8 and must say so out loud."""
 
     def _warnings(self, values: dict) -> list[str]:
         import anatomapa

@@ -15,9 +15,11 @@ authors:
   - given-names: Marcelo
     family-names: Reis
     affiliation: Centro Universitário CESMAC
+    orcid: "https://orcid.org/0000-0002-9195-7750"
   - given-names: Mozart
     family-names: Melo
     affiliation: Centro Universitário CESMAC
+    orcid: "https://orcid.org/0000-0002-4865-6581"
 date-released: "2026-08-19"
 license: MIT
 identifiers:

@@ -10,8 +10,8 @@ from anatomapa.domain.model import AnatomicalModel
 
 _SIDES = ("left", "right")
 
-# Ids que mudaram de significado na 0.4: continuam válidos, mas pintam outra
-# coisa. O aviso sai enquanto durar a 0.4 e some na 0.5.
+# Ids que mudaram de significado na 0.3.8: continuam válidos, mas pintam
+# outra coisa. O aviso sai enquanto durar a faixa 0.3 e some na 0.4.0.
 _RENAMED_MEANING = {
     "leg": (
         "'leg' agora é o membro inferior inteiro (quadril, coxa, joelho, "
@@ -46,7 +46,7 @@ def _user_stacklevel() -> int:
 
 
 def _warn_changed_meaning(region_keys: list[str]) -> None:
-    """Warn once per call for ids whose meaning changed in 0.4."""
+    """Warn once per call for ids whose meaning changed in 0.3.8."""
     seen = {
         key.rpartition("_")[0] if key.endswith(_SIDES) else key
         for key in region_keys
@@ -54,7 +54,7 @@ def _warn_changed_meaning(region_keys: list[str]) -> None:
     stacklevel = _user_stacklevel()
     for region_id in sorted(seen & _RENAMED_MEANING.keys()):
         warnings.warn(
-            f"{_RENAMED_MEANING[region_id]} Este aviso sai na versão 0.5.",
+            f"{_RENAMED_MEANING[region_id]} Este aviso sai na versão 0.4.0.",
             DeprecationWarning,
             stacklevel=stacklevel,
         )

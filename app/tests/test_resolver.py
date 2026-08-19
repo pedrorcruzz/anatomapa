@@ -8,7 +8,7 @@ from anatomapa.resolver.resolver import ResolutionError, analyze, resolve
 
 
 def setUpModule():
-    """Silence the 0.4 meaning-change notice: these fixtures use the old ids on purpose."""
+    """Silence the 0.3.8 meaning-change notice: these fixtures use the old ids on purpose."""
     warnings.filterwarnings(
         "ignore",
         message="'(leg|arm)' agora é o membro",

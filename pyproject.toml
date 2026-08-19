@@ -14,6 +14,11 @@ authors = [
   { name = "Marcelo Reis" },
   { name = "Mozart Melo" },
 ]
+# Separado de authors de propósito: o setuptools joga em Author-email só quem tem
+# e-mail, o que quebraria os três nomes em dois campos na página do PyPI.
+maintainers = [
+  { name = "Pedro Rosa", email = "phrosa.dev@gmail.com" },
+]
 keywords = ["anatomy", "heatmap", "body map", "svg", "visualization", "epidemiology", "anatomia", "mapa de calor"]
 classifiers = [
   "Programming Language :: Python :: 3",

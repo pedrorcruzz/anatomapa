@@ -1209,10 +1209,11 @@ class SvgRenderer:
             if elem_id not in fill_by_region:
                 continue
             elem.set("fill", fill_by_region[elem_id])
-            # Traço da própria cor fecha a fresta de antialiasing entre
-            # regiões vizinhas, que aparece como linha fina na emenda
+            # Traço da própria cor dilata a região para fechar as frestas do
+            # desenho de origem, do mesmo tamanho da costura do modo suave. Sem
+            # ele o rasterizador mostra cada fresta como faixa branca
             elem.set("stroke", fill_by_region[elem_id])
-            elem.set("stroke-width", str(round(vw * 0.002, 2)))
+            elem.set("stroke-width", str(round(vw * 0.020, 2)))
             elem.set("stroke-linejoin", "round")
             # Remove atributo style para evitar conflito com o atributo fill
             if "style" in elem.attrib:
@@ -1223,7 +1224,7 @@ class SvgRenderer:
                 overlay.set("fill", veils[elem_id])
                 # O traço do véu cobre o anel de traço da região por baixo
                 overlay.set("stroke", veils[elem_id])
-                overlay.set("stroke-width", str(round(vw * 0.002, 2)))
+                overlay.set("stroke-width", str(round(vw * 0.020, 2)))
                 overlay.set("stroke-linejoin", "round")
                 overlays.append((position + 1, overlay))
         for position, overlay in reversed(overlays):

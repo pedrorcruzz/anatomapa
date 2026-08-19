@@ -218,9 +218,9 @@ region, the library walks up the tree and uses the first ancestor holding a valu
 The real forensic case, one side as a whole and the other in detail, is the third of the [Quick examples](#quick-examples).
 
 **Migrating from 0.3 (breaking changes).** `leg` was the calf (now `lower_leg`) and `arm` was
-the segment above the elbow (now `upper_arm`); today they are the whole limbs, and using them
-emits a `DeprecationWarning` pointing at your line and at the new id, because old code keeps
-running while painting something else. `pelvis` became `hip` and `buttocks` moved under `leg`,
+the segment above the elbow (now `upper_arm`); today they are the whole limbs. Since 0.4.0 there
+is no runtime warning anymore: old code runs silently while painting something else, so review
+your `leg` and `arm` usages before upgrading. `pelvis` became `hip` and `buttocks` moved under `leg`,
 so a value on `trunk` no longer paints the buttocks; `chest`, `abdomen` and `back` remain valid, but became aggregators.
 
 **Regions with no data** natively show in **neutral grey** (#9aa0a6), distinct from cold:

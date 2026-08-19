@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=5" width="120" alt="anatomapa" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=6" width="120" alt="anatomapa" />
 </p>
 
 <h1 align="center">anatomapa</h1>
@@ -24,18 +24,15 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=5" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=6" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
 </p>
-
-<br>
 
 ## Sobre
 
-**anatomapa** é uma biblioteca Python para gerar **mapas de calor anatômicos** da superfície
-externa do corpo humano: você entrega valores por região (frequência, intensidade ou densidade
-de eventos) e a lib devolve o corpo colorido, de frente e de costas, masculino ou feminino,
-com a cor proporcional ao valor. Serve pra qualquer área que registra a região corporal:
-peçonhentos, trauma ocupacional, lesão esportiva, forense, queimaduras e dermatologia.
+**anatomapa** é uma biblioteca Python para gerar **mapas de calor anatômicos** da superfície externa
+do corpo humano: você entrega valores por região (frequência, intensidade ou densidade de eventos) e a
+lib devolve o corpo colorido, de frente e de costas, masculino ou feminino, com a cor proporcional ao
+valor. Serve pra qualquer área que registra a região corporal: peçonhentos, trauma ocupacional, lesão esportiva, forense, queimaduras e dermatologia.
 
 - **Zero dependências:** só a stdlib do Python no núcleo; PNG/JPG é um extra opcional.
 - **Determinística:** a mesma entrada gera exatamente o mesmo SVG.
@@ -80,7 +77,7 @@ am.heatmap({
 
 Um dicionário com três regiões já basta. Região sem valor sai em cinza neutro, que significa
 "sem dado", não "valor baixo"; e a mão sem sufixo de lado pinta as duas mãos.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=5" alt="Mapa com peito superior, mãos e joelhos coloridos e o resto em cinza" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=6" alt="Mapa com peito superior, mãos e joelhos coloridos e o resto em cinza" width="340" /></p>
 
 ```python
 am.heatmap(
@@ -91,7 +88,7 @@ am.heatmap(
 
 `leg` é o membro inferior inteiro: um valor só desce para nádegas, coxa, joelho, perna,
 tornozelo, pé e dedos. É a herança em ação: você manda o dado no nível que tiver.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=5" alt="Vista posterior com o membro inferior inteiro quente e o dorso mais frio" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=6" alt="Vista posterior com o membro inferior inteiro quente e o dorso mais frio" width="340" /></p>
 
 ```python
 am.heatmap({
@@ -103,10 +100,42 @@ am.heatmap({
 }).save("mapa.svg")
 ```
 
-Um lado no geral e o outro em detalhe, na mesma chamada. À direita tudo sai em 80; à esquerda
-pinta só o declarado, e o dedo do pé herda 40 do pé, o ancestral mais próximo. O quadril
-esquerdo fica sem valor e não pinta: quem detalha assume cobrir tudo que quer pintar.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=5" alt="Lado direito uniforme e lado esquerdo detalhado segmento a segmento" width="340" /></p>
+Um lado no geral e o outro em detalhe, na mesma chamada. À direita tudo sai em 80; à esquerda pinta só
+o declarado, e o dedo do pé herda 40 do pé, o ancestral mais próximo. O quadril esquerdo fica sem valor e não pinta: quem detalha assume cobrir tudo que quer pintar.
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=6" alt="Lado direito uniforme e lado esquerdo detalhado segmento a segmento" width="340" /></p>
+
+```python
+dados = {
+    Region.UPPER_BACK: 120,
+    Region.LOWER_BACK: 340,
+    Region.SHOULDER_LEFT: 90,
+    Region.KNEE: 55,
+}
+
+fig = am.heatmap(dados, view="both", body="female", title="Lesões por região")
+fig.save("mapa.svg")
+fig.save("mapa.png")  # o formato sai da extensão
+```
+
+A figura é um objeto: monte o dado numa variável, gere uma vez e salve em quantos formatos quiser,
+sem recalcular nada (o `.png` pede o extra `raster`). `view="both"` desenha frente e costas com uma escala e uma legenda só.
+
+```python
+# uma linha por região; você declara as colunas, nada é adivinhado
+dados = am.from_xlsx("lesoes.xlsx", sheet="2024",
+                     region_col="Região", value_col="Total", header=True)
+
+# os rótulos da planilha quase nunca batem com os ids, então o de-para é seu
+de_para = {"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM, "PERNA": Region.LOWER_LEG}
+
+print(am.validate(dados, region_map=de_para))  # confere antes de desenhar
+am.heatmap(dados, region_map=de_para).save("mapa.svg")
+```
+
+A resolução é estrita, então caixa alta, acento, espaço e hífen contam: é pra isso que o `region_map`
+existe. `validate()` é um ensaio que não desenha nada, pra conferir o de-para antes. Atenção ao recorte:
+planilha com `BRAÇO` e `ANTE-BRAÇO` em linhas separadas quer `UPPER_ARM` (o segmento acima do cotovelo),
+não `ARM`, que é o membro inteiro; o mesmo vale pra `PERNA` ao lado de `COXA`, que é `LOWER_LEG`.
 
 ## Parâmetros de `heatmap()`
 
@@ -129,43 +158,29 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `region_map` | `dict {seu rótulo: id da região}`                              | `None`          | De-para de nomes seus; tem precedência |
 | `split`      | `True`, `False`                                                | `False`         | Só com `view="both"`, senão `ValueError`: `True` devolve o par (frente, costas) de figuras independentes com a mesma escala de cor |
 
-Retorna um objeto [`Figure`](#saída-o-objeto-figure). Nome de região desconhecido levanta
-`ResolutionError` (exceção pública da lib). A paleta é sempre a **térmica** (azul frio para
-laranja quente, visual de câmera térmica) e a escala sempre **linear**, sem escolha.
+Retorna um objeto [`Figure`](#saída-o-objeto-figure). Nome de região desconhecido levanta `ResolutionError`
+(exceção pública da lib). A paleta é sempre a **térmica** (azul frio para laranja quente, visual de câmera térmica) e a escala sempre **linear**, sem escolha.
 
 ## Fundo e título
 
-- **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão);
-  as cores da legenda se adaptam ao fundo escolhido.
-- **`title`**: sai em negrito, centralizado em relação ao corpo, acima do desenho; título
-  longo encolhe a fonte para caber e o texto segue também como `<title>` do SVG. Com
-  `split=True`, cada figura recebe o título.
-
-A **legenda** (barra de valores mín..máx, rótulo conforme `lang`) e o **degradê térmico** são
-nativos, sem parâmetro. A escala conta só valor que realmente pinta (agregador coberto pelos
-filhos fica de fora), e os marcadores ganham casas decimais quando arredondar para inteiro
-repetiria dois deles.
+- **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão); as cores da legenda se adaptam ao fundo escolhido.
+- **`title`**: negrito, centralizado acima do corpo; título longo encolhe a fonte pra caber e o texto vai também no `<title>` do SVG. Com `split=True`, cada figura recebe o título.
+- **Legenda e degradê térmico**: nativos, sem parâmetro. A escala conta só valor que realmente pinta (agregador coberto pelos filhos fica de fora), e os marcadores ganham casas decimais quando arredondar para inteiro repetiria dois deles.
 
 ## Nomes de região
 
-A identificação é **estrita**: vale o id exato da região ou uma chave do seu `region_map`;
-nada é adivinhado. Nome desconhecido levanta `ResolutionError`, listando o que falhou e
-sugerindo o mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
+A identificação é **estrita**: vale o id exato da região ou uma chave do seu `region_map`; nada é
+adivinhado. Nome desconhecido levanta `ResolutionError`, listando o que falhou e sugerindo o mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
 
-**No código: o enum `Region`.** `from anatomapa import Region` traz 94 constantes: os 32 ids
-canônicos mais as versões `_LEFT`/`_RIGHT` das 31 bilaterais. Cada membro é a própria string
-do id (`Region.HAND == "hand"`), com autocomplete e typo virando erro imediato.
+**No código: o enum `Region`.** `from anatomapa import Region` traz 94 constantes: os 32 ids canônicos
+mais as versões `_LEFT`/`_RIGHT` das 31 bilaterais. Cada membro é a própria string do id (`Region.HAND == "hand"`), com autocomplete e typo virando erro imediato.
 
 **Lateralidade.** Todas as regiões são bilaterais, menos `genital`, central. O sufixo do id
 escolhe o lado: `Region.HAND_RIGHT` pinta só a direita; sem sufixo, os dois lados. O lado é
 o do **observador** (esquerda da imagem), não o anatômico; lado em região central é erro.
 
-**Seus nomes vindos da planilha: `region_map`.** Você declara o de-para uma vez, no código;
-a chave é comparada exatamente como está na fonte, incluindo acento e caixa alta:
-
-```python
-am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM})
-```
+**Seus nomes vindos da planilha: `region_map`.** Você declara o de-para uma vez, no código; a chave é
+comparada exatamente como está na fonte, com acento e caixa. Exemplo com Excel nos [Exemplos rápidos](#exemplos-rápidos).
 
 ## Regiões e hierarquia
 
@@ -217,35 +232,23 @@ cada região, a lib sobe pela árvore e usa o primeiro ancestral com valor. Trê
 
 O caso real de perícia, um lado no geral e o outro em detalhe, é o terceiro dos [Exemplos rápidos](#exemplos-rápidos).
 
-**Migrando da 0.3 (quebras).** `leg` era a panturrilha (agora `lower_leg`) e `arm` era o braço
-acima do cotovelo (agora `upper_arm`); hoje são os membros inteiros. Desde a 0.4.0 não há mais
-aviso em tempo de execução: o código antigo roda em silêncio pintando outra coisa, então confira
-seus usos antes de atualizar. `pelvis` virou `hip`, filho de `leg`; `buttocks` também mudou para `leg`, então
-valor em `trunk` não pinta mais as nádegas. `chest`, `abdomen` e `back` viraram agregadores.
+**Migrando da 0.3 (quebras).** `leg` era a panturrilha (agora `lower_leg`) e `arm` era o braço acima do
+cotovelo (agora `upper_arm`); hoje são os membros inteiros. Desde a 0.4.0 não há mais aviso em tempo de
+execução: o código antigo roda em silêncio pintando outra coisa, então confira seus usos antes de atualizar.
+`pelvis` virou `hip`, filho de `leg`; `buttocks` também mudou para `leg`, então valor em `trunk` não pinta mais as nádegas. `chest`, `abdomen` e `back` viraram agregadores.
 
-**Região sem dado** sai nativamente em **cinza neutro** (#9aa0a6), distinto do frio: "sem
-dado" não se confunde com "poucos casos". Sem parâmetro.
+**Região sem dado** sai nativamente em **cinza neutro** (#9aa0a6), distinto do frio: "sem dado" não se confunde com "poucos casos". Sem parâmetro.
 
 ## Entrada de dados
 
-`heatmap()` aceita `dict` ou qualquer iterável de pares `(região, valor)`, então a saída dos leitores vai direto:
+`heatmap()` aceita `dict` ou qualquer iterável de pares `(região, valor)`, então a saída dos leitores
+vai direto. Em todos, você declara as colunas; nada é adivinhado.
 
-```python
-# dict puro (ou normalizado via from_dict)
-fig = am.heatmap(am.from_dict({"hand": 10, "foot": 25}))
-# CSV: você declara as colunas, nada é adivinhado
-dados = am.from_csv("lesoes.csv", region_col="regiao", value_col="total", delimiter=",")
-# JSON: objeto {"hand": 10} ou lista [{"region": "...", "value": ...}]
-dados = am.from_json("lesoes.json", region_key="region", value_key="value")
-# Registros: dicts, namedtuples, dataclasses e DataFrame do pandas (duck typing)
-dados = am.from_records(registros, region_col="regiao", value_col="total")
-# Excel .xlsx, sem dependência externa; coluna por índice, letra "D" ou nome do cabeçalho
-dados = am.from_xlsx("lesoes.xlsx", sheet="2024", region_col="Região",
-                     value_col="Total", header=True)
-```
-
-No `from_xlsx`, `aggregate` resolve planilhas com uma linha por caso: `"count"` conta as
-ocorrências e `"sum"` soma; `None` (padrão) espera uma linha por região.
+- **`from_dict(data)`**: normaliza um dict `{região: valor}` em pares.
+- **`from_csv(fonte, region_col, value_col, delimiter=",")`**: arquivo ou string CSV.
+- **`from_json(fonte, region_key, value_key)`**: objeto `{"hand": 10}` ou lista `[{"region": ..., "value": ...}]`.
+- **`from_records(registros, region_col, value_col)`**: dicts, namedtuples, dataclasses e DataFrame do pandas (duck typing).
+- **`from_xlsx(fonte, sheet, region_col, value_col, header, aggregate)`**: Excel `.xlsx` sem dependência externa; coluna por índice, letra `"D"` ou nome do cabeçalho. `aggregate="count"` conta uma linha por caso, `"sum"` soma e `None` (padrão) espera uma linha por região. Exemplo completo nos [Exemplos rápidos](#exemplos-rápidos).
 
 ## Saída: o objeto `Figure`
 
@@ -258,9 +261,8 @@ ocorrências e `"sum"` soma; `None` (padrão) espera uma linha por região.
 | `str(fig)`       | idem `to_svg()`, SVG puro (útil em templates) |
 | célula do Jupyter | renderiza inline automaticamente |
 
-Pra saída **raster**, instale o extra `pip install "anatomapa[raster]"` (cairosvg e Pillow,
-importados só sob demanda; o núcleo segue zero dependências). A figura rasteriza com o mesmo
-visual térmico do SVG; sem o extra, png/jpg/jpeg levanta `ImportError` com a dica.
+Pra saída **raster**, instale o extra `pip install "anatomapa[raster]"` (cairosvg e Pillow, importados só
+sob demanda; o núcleo segue zero dependências). A figura rasteriza com o mesmo visual térmico do SVG; sem o extra, png/jpg/jpeg levanta `ImportError` com a dica.
 
 ## Utilidades
 
@@ -269,18 +271,16 @@ visual térmico do SVG; sem o extra, png/jpg/jpeg levanta `ImportError` com a di
 ```python
 am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 # {'resolved': {'hand': 'hand', 'hand_right': 'hand_right'},
-#  'unresolved': {'haand': {'reason': 'região desconhecida',
-#                           'suggestions': ['hand', 'head', 'hand_left']}}}
+#  'unresolved': {'haand': {'reason': 'região desconhecida', 'suggestions': ['hand', 'head', 'hand_left']}}}
 ```
 
-**`list_regions(lang="pt", body="male", view=None)`** lista as regiões, cada uma como
-`{"id", "label", "bilateral", "parent", "views"}`; `view` filtra por vista (agregadoras, de `views` vazio, sempre aparecem).
+**`list_regions(lang="pt", body="male", view=None)`** lista as regiões, cada uma como `{"id", "label", "bilateral", "parent", "views"}`; `view` filtra por vista (agregadoras, de `views` vazio, sempre aparecem).
 
 ## Galeria
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=5" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=5" alt="Modelo anatômico masculino e feminino" width="420" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=6" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=6" alt="Modelo anatômico masculino e feminino" width="420" />
 </p>
 
 ## Licença e atribuição

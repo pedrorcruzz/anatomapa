@@ -169,43 +169,43 @@ am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM
 
 ## Regiões e hierarquia
 
-São **32 regiões** numa árvore de até 3 níveis. Região **agregadora** não tem desenho próprio:
-um valor nela desce para os filhos. Entre parênteses, a vista onde a região desenha:
+São **32 regiões** numa árvore de até 3 níveis; a coluna **Dentro de** mostra o pai de cada uma.
+Linha sem marca em Frente e Costas é **agregadora**: não desenha nada, e um valor nela desce para os filhos.
 
-```text
-head           Cabeça (agregadora)
-├─ face            Face (frente)
-├─ skull           Crânio (costas)
-└─ neck            Pescoço (frente e costas)
-trunk          Tronco (agregadora)
-├─ shoulder        Ombro (frente e costas)
-├─ chest           Peito (agregadora)
-│  ├─ upper_chest      Peito superior (frente)
-│  └─ lower_chest      Peito inferior (frente)
-├─ abdomen         Abdômen (agregadora)
-│  ├─ upper_abdomen    Abdômen superior (frente)
-│  └─ lower_abdomen    Abdômen inferior (frente)
-├─ back            Costas (agregadora)
-│  ├─ upper_back       Dorso (costas)
-│  └─ lower_back       Região lombar (costas)
-└─ genital         Região genital (frente; a única central)
-arm            Membro superior (agregadora)
-├─ upper_arm       Braço (frente e costas)
-├─ elbow           Cotovelo (frente e costas)
-├─ forearm         Antebraço (frente e costas)
-├─ wrist           Punho (frente e costas)
-└─ hand            Mão (frente e costas)
-   └─ finger           Dedos da mão (frente e costas)
-leg            Membro inferior (agregadora)
-├─ hip             Quadril (frente)
-├─ buttocks        Nádegas (costas)
-├─ thigh           Coxa (frente e costas)
-├─ knee            Joelho (frente e costas)
-├─ lower_leg       Perna (frente e costas)
-├─ ankle           Tornozelo (frente e costas)
-└─ foot            Pé (frente e costas)
-   └─ toe              Dedos do pé (frente e costas)
-```
+| Id | Região | Dentro de | Frente | Costas |
+|----|--------|-----------|:------:|:------:|
+| `head` | Cabeça | raiz |  |  |
+| `face` | Face | `head` | ✓ |  |
+| `skull` | Crânio | `head` |  | ✓ |
+| `neck` | Pescoço | `head` | ✓ | ✓ |
+| `trunk` | Tronco | raiz |  |  |
+| `shoulder` | Ombro | `trunk` | ✓ | ✓ |
+| `chest` | Peito | `trunk` |  |  |
+| `upper_chest` | Peito superior | `chest` | ✓ |  |
+| `lower_chest` | Peito inferior | `chest` | ✓ |  |
+| `abdomen` | Abdômen | `trunk` |  |  |
+| `upper_abdomen` | Abdômen superior | `abdomen` | ✓ |  |
+| `lower_abdomen` | Abdômen inferior | `abdomen` | ✓ |  |
+| `back` | Costas | `trunk` |  |  |
+| `upper_back` | Dorso | `back` |  | ✓ |
+| `lower_back` | Região lombar | `back` |  | ✓ |
+| `genital` | Região genital | `trunk` | ✓ |  |
+| `arm` | Membro superior | raiz |  |  |
+| `upper_arm` | Braço | `arm` | ✓ | ✓ |
+| `elbow` | Cotovelo | `arm` | ✓ | ✓ |
+| `forearm` | Antebraço | `arm` | ✓ | ✓ |
+| `wrist` | Punho | `arm` | ✓ | ✓ |
+| `hand` | Mão | `arm` | ✓ | ✓ |
+| `finger` | Dedos da mão | `hand` | ✓ | ✓ |
+| `leg` | Membro inferior | raiz |  |  |
+| `hip` | Quadril | `leg` | ✓ |  |
+| `buttocks` | Nádegas | `leg` |  | ✓ |
+| `thigh` | Coxa | `leg` | ✓ | ✓ |
+| `knee` | Joelho | `leg` | ✓ | ✓ |
+| `lower_leg` | Perna | `leg` | ✓ | ✓ |
+| `ankle` | Tornozelo | `leg` | ✓ | ✓ |
+| `foot` | Pé | `leg` | ✓ | ✓ |
+| `toe` | Dedos do pé | `foot` | ✓ | ✓ |
 
 **Herança (rollup), consciente de lado.** Mande o dado no nível que você tiver. Para pintar
 cada região, a lib sobe pela árvore e usa o primeiro ancestral com valor. Três regras:

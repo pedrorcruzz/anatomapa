@@ -1,0 +1,33 @@
+cff-version: 1.2.0
+message: "If you use anatomapa in academic work, please cite it as below."
+title: anatomapa
+abstract: >-
+  Python library for generating anatomical heatmaps of the human body surface, in anterior
+  and posterior views, coloring regions by frequency, intensity or density of events. Zero
+  external dependencies and deterministic output.
+type: software
+authors:
+  - given-names: Pedro
+    family-names: Rosa
+    email: phrosa.dev@gmail.com
+    affiliation: Centro Universitário CESMAC
+  - given-names: Marcelo
+    family-names: Reis
+    affiliation: Centro Universitário CESMAC
+  - given-names: Mozart
+    family-names: Melo
+    affiliation: Centro Universitário CESMAC
+version: 0.4.4
+date-released: "2026-08-19"
+license: MIT
+repository-code: "https://github.com/pedrorcruzz/anatomapa"
+url: "https://pypi.org/project/anatomapa/"
+keywords:
+  - anatomy
+  - heatmap
+  - body map
+  - svg
+  - visualization
+  - epidemiology
+  - anatomia
+  - mapa de calor

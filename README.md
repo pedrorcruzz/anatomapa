@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=3" width="120" alt="anatomapa" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=4" width="120" alt="anatomapa" />
 </p>
 
 <h1 align="center">anatomapa</h1>
@@ -24,7 +24,7 @@
 </p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=3" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=4" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
 </p>
 
 <br>
@@ -80,7 +80,7 @@ am.heatmap({
 
 Um dicionário com três regiões já basta. Região sem valor sai em cinza neutro, que significa
 "sem dado", não "valor baixo"; e a mão sem sufixo de lado pinta as duas mãos.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=3" alt="Mapa com peito superior, mãos e joelhos coloridos e o resto em cinza" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-minimo.png?v=4" alt="Mapa com peito superior, mãos e joelhos coloridos e o resto em cinza" width="340" /></p>
 
 ```python
 am.heatmap(
@@ -91,7 +91,7 @@ am.heatmap(
 
 `leg` é o membro inferior inteiro: um valor só desce para nádegas, coxa, joelho, perna,
 tornozelo, pé e dedos. É a herança em ação: você manda o dado no nível que tiver.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=3" alt="Vista posterior com o membro inferior inteiro quente e o dorso mais frio" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-heranca.png?v=4" alt="Vista posterior com o membro inferior inteiro quente e o dorso mais frio" width="340" /></p>
 
 ```python
 am.heatmap({
@@ -106,7 +106,7 @@ am.heatmap({
 Um lado no geral e o outro em detalhe, na mesma chamada. À direita tudo sai em 80; à esquerda
 pinta só o declarado, e o dedo do pé herda 40 do pé, o ancestral mais próximo. O quadril
 esquerdo fica sem valor e não pinta: quem detalha assume cobrir tudo que quer pintar.
-<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=3" alt="Lado direito uniforme e lado esquerdo detalhado segmento a segmento" width="340" /></p>
+<p align="center"><img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-lados.png?v=4" alt="Lado direito uniforme e lado esquerdo detalhado segmento a segmento" width="340" /></p>
 
 ## Parâmetros de `heatmap()`
 
@@ -279,8 +279,8 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 ## Galeria
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=3" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=3" alt="Modelo anatômico masculino e feminino" width="420" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=4" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=4" alt="Modelo anatômico masculino e feminino" width="420" />
 </p>
 
 ## Licença e atribuição

@@ -32,6 +32,12 @@ docs/
 template/
 app/tools/*
 !app/tools/coverage_check.py
+REGIOES.md
+
+# Imagens de validacao geradas localmente (a galeria versionada vive em assets/)
+validar-*.png
+visao-*.png
+regioes-*.png
 
 TODO.md
 

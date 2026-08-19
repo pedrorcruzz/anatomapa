@@ -156,20 +156,35 @@ def _viewbox_of(root: ET.Element) -> tuple[float, float, float, float]:
         return 0.0, 0.0, 400.0, 900.0
 
 
+def _body_width(root: ET.Element, vw: float) -> float:
+    """Width of the drawing itself, with the legend band discounted.
+
+    The legend runs before the title and widens the viewBox to the right by a
+    fixed fraction of the body width. Centring the title on the widened box
+    would push it towards the legend, so the band is taken back out here.
+    """
+    has_legend = any(elem.get("id") == "legend-bar" for elem in root.iter())
+    if not has_legend:
+        return vw
+    return vw / (1.0 + _LEGEND_WIDTH_RATIO)
+
+
 def _append_title(root: ET.Element, title: str | None, background: str) -> None:
     """Draw the figure title in a band above the drawing, growing the viewBox upwards.
 
     Does nothing without a title, so a figure with none keeps exactly the same
-    layout. Must run after the legend, which widens the viewBox sideways.
+    layout. Must run after the legend, which widens the viewBox sideways: the
+    title is centred on the body, not on the body plus legend.
     """
     if not title:
         return
 
     vx, vy, vw, vh = _viewbox_of(root)
+    body_w = _body_width(root, vw)
     base_size = vh * 0.030
     # Título longo encolhe para caber na largura (~0.58 de avanço por caractere
     # em Helvetica negrito), mas a faixa mantém a altura do tamanho cheio
-    fitted = vw * 0.92 / max(len(title) * 0.58, 1.0)
+    fitted = body_w * 0.92 / max(len(title) * 0.58, 1.0)
     font_size = min(base_size, fitted)
     band_h = base_size * 2.4
     new_vy = round(vy - band_h, 2)
@@ -187,7 +202,7 @@ def _append_title(root: ET.Element, title: str | None, background: str) -> None:
     ui_main = _legend_ui_colors(background)[0]
     text = ET.SubElement(root, "text")
     text.set("id", "figure-title")
-    text.set("x", str(round(vx + vw / 2.0, 2)))
+    text.set("x", str(round(vx + body_w / 2.0, 2)))
     text.set("y", str(round(new_vy + band_h * 0.62, 2)))
     text.set("text-anchor", "middle")
     text.set("font-size", str(round(font_size, 2)))
@@ -274,30 +289,46 @@ def _vertical_neighbors(
     """Map each region to its (above, below) neighbours along the body axis.
 
     Neighbours drive the colour blending between adjacent regions. A tuple
-    value blends the edge with the average of several regions (the pelvis
-    meets both thighs). Regions absent from `present` are dropped.
+    value blends the edge with the average of several regions (the genital
+    region meets both thighs). Regions absent from `present` are dropped.
+
+    Every region is bilateral, so the chains are built per side: the left half
+    of the chest blends with the left half of the abdomen, never with the right
+    one. The midline seam is handled by the thermal blur, not here.
     """
-    posterior = "back" in present
-    trunk_top = "back" if posterior else "chest"
-    trunk_bottom = "buttocks" if posterior else "pelvis"
-    thighs = ("thigh-left", "thigh-right")
-    neighbors: dict[str, tuple[object, object]] = {"head": (None, trunk_top)}
+    posterior = any(key.startswith("upper_back") for key in present)
     if posterior:
-        neighbors["back"] = ("head", "buttocks")
-        neighbors["buttocks"] = ("back", thighs)
+        trunk = ["upper_back", "lower_back"]
+        crown, trunk_bottom = "skull", "buttocks"
     else:
-        neighbors["chest"] = ("head", "abdomen")
-        neighbors["abdomen"] = ("chest", "pelvis")
-        neighbors["pelvis"] = ("abdomen", thighs)
+        trunk = ["upper_chest", "lower_chest", "upper_abdomen", "lower_abdomen"]
+        crown, trunk_bottom = "face", "hip"
+
+    # Cadeia da coroa ao dedo do pé; o braço pendura no ombro, que por sua vez
+    # nasce no topo do tronco
+    spine = [crown, "neck", *trunk, trunk_bottom]
+    spine += ["thigh", "knee", "lower_leg", "ankle", "foot", "toe"]
+    limb = ["shoulder", "upper_arm", "elbow", "forearm", "wrist", "hand", "finger"]
+
+    neighbors: dict[str, tuple[object, object]] = {}
     for side in ("left", "right"):
-        neighbors[f"arm-{side}"] = (trunk_top, f"forearm-{side}")
-        neighbors[f"forearm-{side}"] = (f"arm-{side}", f"hand-{side}")
-        neighbors[f"hand-{side}"] = (f"forearm-{side}", f"finger-{side}")
-        neighbors[f"finger-{side}"] = (f"hand-{side}", None)
-        neighbors[f"thigh-{side}"] = (trunk_bottom, f"leg-{side}")
-        neighbors[f"leg-{side}"] = (f"thigh-{side}", f"foot-{side}")
-        neighbors[f"foot-{side}"] = (f"leg-{side}", f"toe-{side}")
-        neighbors[f"toe-{side}"] = (f"foot-{side}", None)
+        chain = [f"{region}-{side}" for region in spine]
+        for index, key in enumerate(chain):
+            above = chain[index - 1] if index else None
+            below = chain[index + 1] if index + 1 < len(chain) else None
+            neighbors[key] = (above, below)
+
+        arm = [f"{region}-{side}" for region in limb]
+        neighbors[arm[0]] = (f"{trunk[0]}-{side}", arm[1])
+        for index in range(1, len(arm)):
+            below = arm[index + 1] if index + 1 < len(arm) else None
+            neighbors[arm[index]] = (arm[index - 1], below)
+
+    if not posterior:
+        neighbors["genital"] = (
+            ("hip-left", "hip-right"),
+            ("thigh-left", "thigh-right"),
+        )
     return {k: v for k, v in neighbors.items() if k in present}
 
 
@@ -632,7 +663,8 @@ def _append_legend(
     tick_x_end = tick_x_start + tick_len
     text_x = tick_x_end + legend_w * 0.06
 
-    for tick_val in ticks:
+    tick_labels = _format_ticks(ticks)
+    for tick_val, tick_label in zip(ticks, tick_labels):
         # Proporção vertical: max no topo (y=bar_y), min na base (y=bar_y+bar_h)
         t = (tick_val - heatmap.value_min) / span if span else 0.0
         tick_y = bar_y + bar_h * (1.0 - t)
@@ -652,7 +684,7 @@ def _append_legend(
         tick_text.set("font-size", str(round(tick_font_size, 2)))
         tick_text.set("font-family", "Helvetica, Arial, sans-serif")
         tick_text.set("fill", ui_sub)
-        tick_text.text = _format_tick(tick_val)
+        tick_text.text = tick_label
 
 
 def _build_smooth_svg(
@@ -840,9 +872,15 @@ def _build_smooth_svg(
             overlay.set("stroke-linejoin", "round")
 
     # Camada 2: inner-glow frio por cima -- bordas frias em cada região.
+    # Leva a mesma costura da máscara: sem ela, uma fresta entre dois paths do
+    # desenho vira buraco só nesta camada e deixa passar uma linha clara, sem o
+    # escurecimento das bordas.
     glow_elem = ET.SubElement(masked_group, "path")
     glow_elem.set("d", body_union_d)
     glow_elem.set("fill", "white")
+    glow_elem.set("stroke", "white")
+    glow_elem.set("stroke-width", seam_w)
+    glow_elem.set("stroke-linejoin", "round")
     glow_elem.set("filter", "url(#inner-glow-cold)")
 
     # Camada 3 (NÍTIDA, fora da máscara/blur): linhas de detalhe + contorno
@@ -966,14 +1004,32 @@ def _format_value(v: float) -> str:
     return f"{v:.2f}"
 
 
-def _format_tick(v: float) -> str:
-    """Format a legend tick value.
+def _format_ticks(values: list[float]) -> list[str]:
+    """Format every legend tick, using the fewest decimals that keeps them apart.
 
-    Always rounds to the nearest integer to produce clean ggplot-style
-    labels. Tick values are approximate scale positions, not precise
-    measurements, so losing the fractional part is intentional.
+    Rounding to integers gives clean ggplot-style labels, but on a narrow range
+    (2 to 5, say) it collapses two ticks into the same text. Decimals are added
+    only when that happens.
+
+    Parameters
+    ----------
+    values:
+        Tick values, in the order they are drawn.
+
+    Returns
+    -------
+    list[str]
+        One label per value, all distinct whenever the values are.
     """
-    return str(round(v))
+    unique = len({round(v, 6) for v in values})
+    for decimals in (0, 1, 2):
+        labels = [
+            str(int(round(v))) if decimals == 0 else f"{v:.{decimals}f}"
+            for v in values
+        ]
+        if len(set(labels)) == unique:
+            return labels
+    return [f"{v:.3f}" for v in values]
 
 
 class SvgRenderer:

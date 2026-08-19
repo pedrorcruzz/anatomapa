@@ -1,15 +1,15 @@
-"""Tests for the trunk subdivision (chest/abdomen/pelvis/back) and related
-features: parent->child rollup, the `missing` parameter and name resolution.
+"""Tests for the region tree and related features: parent->child rollup, the
+`missing` parameter and name resolution.
 
 Covers:
-- Rollup: a value on an aggregating region (such as "trunk") fills the children
-  that have no value of their own (chest, abdomen, pelvis, back); a value on
-  "hand" fills "finger".
-- The Heatmap's value_min/value_max reflect only the real input values.
+- Rollup: a value on an aggregating region (such as "trunk") fills every
+  descendant that has no value of its own, across the whole depth of the tree;
+  a value on "hand" fills "finger".
+- Aggregating regions never paint on their own, so they get no colour entry.
+- The Heatmap's value_min/value_max reflect only the values that paint.
 - missing="neutral" (default) paints a discreet grey; missing="cold" paints cold.
 - An invalid missing raises ValueError.
-- Portuguese name resolution: "peito"->chest, "costas"->back,
-  "abdomen"->abdomen, "pelve"->pelvis, "tronco"->trunk.
+- Portuguese names are rejected unless mapped through region_map.
 - End-to-end render: a value on "trunk" colours the children in both views.
 """
 
@@ -81,13 +81,36 @@ class TestRollupBuild(unittest.TestCase):
         result = build_heatmap(
             {"head": 0.0, "trunk": 100.0}, self.model_anterior, self.cmap, self.scale
         )
-        for rid in ("chest", "abdomen", "pelvis"):
+        children = (
+            "upper_chest", "lower_chest", "upper_abdomen", "lower_abdomen",
+            "shoulder", "genital",
+        )
+        for rid in children:
             self.assertIn(rid, result.colors, f"{rid} não recebeu cor via rollup")
-            self.assertEqual(
-                result.colors[rid],
-                result.colors["trunk"],
-                f"{rid} deveria herdar a mesma cor de trunk",
-            )
+        self.assertEqual(
+            len({result.colors[rid] for rid in children}),
+            1,
+            "todo descendente de trunk deveria herdar a mesma cor",
+        )
+
+    def test_aggregator_gets_no_colour_of_its_own(self):
+        from anatomapa.usecases.build import build_heatmap
+
+        result = build_heatmap(
+            {"trunk": 100.0}, self.model_anterior, self.cmap, self.scale
+        )
+        # trunk não desenha nada: distribui valor, mas não recebe cor
+        self.assertNotIn("trunk", result.colors)
+
+    def test_rollup_reaches_grandchildren(self):
+        from anatomapa.usecases.build import build_heatmap
+
+        result = build_heatmap(
+            {"leg": 7.0}, self.model_anterior, self.cmap, self.scale
+        )
+        # toe é neto de leg, via foot
+        self.assertIn("toe", result.colors)
+        self.assertEqual(result.colors["toe"], result.colors["thigh"])
 
     def test_trunk_value_fills_posterior_children(self):
         from anatomapa.usecases.build import build_heatmap
@@ -95,9 +118,11 @@ class TestRollupBuild(unittest.TestCase):
         result = build_heatmap(
             {"head": 0.0, "trunk": 100.0}, self.model_posterior, self.cmap, self.scale
         )
-        for rid in ("back", "buttocks"):
+        for rid in ("upper_back", "lower_back", "shoulder"):
             self.assertIn(rid, result.colors, f"{rid} não recebeu cor via rollup")
-            self.assertEqual(result.colors[rid], result.colors["trunk"])
+        self.assertEqual(
+            result.colors["upper_back"], result.colors["lower_back"]
+        )
 
     def test_hand_value_fills_finger(self):
         from anatomapa.usecases.build import build_heatmap
@@ -112,9 +137,12 @@ class TestRollupBuild(unittest.TestCase):
         from anatomapa.usecases.build import build_heatmap
 
         result = build_heatmap(
-            {"trunk": 10.0, "chest": 90.0}, self.model_anterior, self.cmap, self.scale
+            {"trunk": 10.0, "upper_chest": 90.0},
+            self.model_anterior, self.cmap, self.scale,
         )
-        self.assertNotEqual(result.colors["chest"], result.colors["trunk"])
+        self.assertNotEqual(
+            result.colors["upper_chest"], result.colors["lower_chest"]
+        )
 
     def test_value_min_max_reflect_only_real_input(self):
         from anatomapa.usecases.build import build_heatmap
@@ -122,8 +150,8 @@ class TestRollupBuild(unittest.TestCase):
         result = build_heatmap(
             {"trunk": 5.0, "head": 20.0}, self.model_anterior, self.cmap, self.scale
         )
-        # O rollup duplica o valor de trunk em chest/abdomen/pelvis, mas
-        # value_min/value_max devem refletir só {5.0, 20.0}, a entrada real.
+        # O rollup espalha o valor de trunk pelos filhos, mas value_min e
+        # value_max devem refletir só {5.0, 20.0}, a entrada real.
         self.assertEqual(result.value_min, 5.0)
         self.assertEqual(result.value_max, 20.0)
 
@@ -228,14 +256,15 @@ class TestSubdivisionNameResolution(unittest.TestCase):
 
     def test_subdivision_ids_resolve(self):
         from anatomapa.resolver.resolver import resolve
-        ids = ["chest", "abdomen", "pelvis", "trunk"]
+        ids = ["upper_chest", "lower_abdomen", "hip", "genital", "trunk"]
         result = resolve(ids, self.model_anterior)
         self.assertEqual(result, {rid: rid for rid in ids})
 
-    def test_back_id_resolves(self):
+    def test_back_ids_resolve(self):
         from anatomapa.resolver.resolver import resolve
-        result = resolve(["back"], self.model_posterior)
-        self.assertEqual(result["back"], "back")
+        result = resolve(["upper_back", "lower_back"], self.model_posterior)
+        self.assertEqual(result["upper_back"], "upper_back")
+        self.assertEqual(result["lower_back"], "lower_back")
 
     def test_portuguese_names_are_rejected(self):
         from anatomapa.resolver.resolver import ResolutionError, resolve
@@ -247,9 +276,9 @@ class TestSubdivisionNameResolution(unittest.TestCase):
     def test_portuguese_name_works_through_region_map(self):
         from anatomapa.resolver.resolver import resolve
         result = resolve(
-            ["peito"], self.model_anterior, region_map={"peito": "chest"}
+            ["peito"], self.model_anterior, region_map={"peito": "upper_chest"}
         )
-        self.assertEqual(result["peito"], "chest")
+        self.assertEqual(result["peito"], "upper_chest")
 
 
 @unittest.skipUnless(_ASSETS_EXIST, "Assets ausentes -- pulando testes de render com rollup")
@@ -264,7 +293,7 @@ class TestTrunkRollupRender(unittest.TestCase):
         import anatomapa
         svg = str(anatomapa.heatmap({"trunk": 50}))
         paths = self._paths_by_id(svg)
-        for rid in ("chest", "abdomen", "pelvis"):
+        for rid in ("upper_chest-left", "lower_chest-right", "lower_abdomen-left"):
             self.assertIn(rid, paths)
             self.assertNotEqual(
                 paths[rid].get("fill"), _MISSING_NEUTRAL_HEX,
@@ -274,7 +303,7 @@ class TestTrunkRollupRender(unittest.TestCase):
     def test_trunk_value_colors_posterior_children(self):
         svg = _render_view({"trunk": 50}, "posterior")
         paths = self._paths_by_id(svg)
-        for rid in ("back", "buttocks"):
+        for rid in ("upper_back-left", "lower_back-right"):
             self.assertIn(rid, paths)
             self.assertNotEqual(
                 paths[rid].get("fill"), _MISSING_NEUTRAL_HEX,
@@ -287,19 +316,19 @@ class TestTrunkRollupRender(unittest.TestCase):
         svg_post = _render_view({"trunk": 50}, "posterior")
         paths_ant = self._paths_by_id(svg_ant)
         paths_post = self._paths_by_id(svg_post)
+        anterior = ("upper_chest", "lower_chest", "upper_abdomen", "lower_abdomen")
+        posterior = ("upper_back", "lower_back")
         colored = {
-            rid for rid in ("chest", "abdomen", "pelvis")
-            if paths_ant.get(rid) is not None
-            and paths_ant[rid].get("fill") != _MISSING_NEUTRAL_HEX
+            rid for rid in anterior
+            if paths_ant.get(f"{rid}-left") is not None
+            and paths_ant[f"{rid}-left"].get("fill") != _MISSING_NEUTRAL_HEX
         }
         colored |= {
-            rid for rid in ("back", "buttocks")
-            if paths_post.get(rid) is not None
-            and paths_post[rid].get("fill") != _MISSING_NEUTRAL_HEX
+            rid for rid in posterior
+            if paths_post.get(f"{rid}-left") is not None
+            and paths_post[f"{rid}-left"].get("fill") != _MISSING_NEUTRAL_HEX
         }
-        self.assertEqual(
-            colored, {"chest", "abdomen", "pelvis", "back", "buttocks"}
-        )
+        self.assertEqual(colored, set(anterior) | set(posterior))
 
 
 if __name__ == "__main__":

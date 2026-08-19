@@ -37,8 +37,7 @@ ou densidade de eventos) e a lib devolve o corpo colorido, de frente e de costas
 masculino ou feminino, com a cor proporcional ao valor de cada região.
 
 Serve pra qualquer área que registra a região corporal como variável: acidentes com animais
-peçonhentos (escorpiões, serpentes, aranhas), traumas ocupacionais, lesões esportivas,
-medicina forense, queimaduras e dermatologia.
+peçonhentos, traumas ocupacionais, lesões esportivas, medicina forense, queimaduras e dermatologia.
 
 - **Zero dependências:** só a stdlib do Python no núcleo; PNG/JPG é um extra opcional.
 - **Determinística:** a mesma entrada gera exatamente o mesmo SVG.
@@ -50,16 +49,13 @@ medicina forense, queimaduras e dermatologia.
 pip install anatomapa
 ```
 
-Requer **Python 3.10+** e nenhuma dependência externa.
-
-Para gerar PNG/JPG/JPEG (saída raster), instale o extra opcional, que traz cairosvg e
-Pillow. O SVG puro não precisa disso.
+Requer **Python 3.10+** e nenhuma dependência externa. Para gerar PNG/JPG/JPEG (saída raster),
+instale o extra opcional, que traz cairosvg e Pillow; o SVG puro não precisa disso. As aspas
+importam, shells como zsh e fish tratam os colchetes como glob:
 
 ```bash
 pip install "anatomapa[raster]"
 ```
-
-As aspas importam: shells como zsh e fish tratam os colchetes como glob, então use aspas.
 
 > Para desenvolvimento, clone o repositório: `git clone https://github.com/pedrorcruzz/anatomapa.git`
 
@@ -68,11 +64,11 @@ As aspas importam: shells como zsh e fish tratam os colchetes como glob, então 
 ```python
 import anatomapa as am
 
-fig = am.heatmap({"hand": 5153, "foot": 13666, "head": 845})
+fig = am.heatmap({"hand": 5153, "foot": 13666, "face": 845})
 fig.save("mapa.svg")
 ```
 
-Pronto: um SVG com mãos, pés e cabeça coloridos por valor. O resto deste manual é opcional.
+Pronto: um SVG com mãos, pés e face coloridos por valor. O resto deste manual é opcional.
 
 ## Parâmetros de `heatmap()`
 
@@ -95,15 +91,8 @@ am.heatmap(values, view="anterior", body="male", lang="pt", format="svg",
 | `region_map` | `dict {seu rótulo: id da região}`                              | `None`          | De-para de nomes seus; tem precedência |
 | `split`      | `True`, `False`                                                | `False`         | Só com `view="both"`: `True` devolve o par (frente, costas) |
 
-**`split`** só vale com `view="both"`: `False` desenha as duas vistas lado a lado numa figura
-única com uma legenda; `True` devolve o **par** `(anterior, posterior)` de figuras independentes,
-cada uma com a própria legenda e a mesma escala de cor. Com outra `view`, levanta `ValueError`.
-
-```python
-frente, costas = am.heatmap(dados, view="both", split=True)
-frente.save("frente.png")
-costas.save("costas.png")
-```
+**`split`** só vale com `view="both"`: `True` devolve o **par** `(anterior, posterior)` de
+figuras independentes, com a mesma escala de cor. Com outra `view`, levanta `ValueError`.
 
 Retorna um objeto [`Figure`](#saída-o-objeto-figure). Nome de região desconhecido levanta
 `ResolutionError` (exceção pública da lib). A paleta de cores é sempre a **térmica**
@@ -112,15 +101,16 @@ de intensidade é sempre **linear**: a cor cresce proporcional ao valor.
 
 ## Fundo e título
 
-- **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão, sem
-  fundo). As cores da legenda se adaptam ao fundo escolhido.
-- **`title`**: quando informado, sai em negrito e centralizado numa faixa acima do desenho; o
-  viewBox cresce só para cima, sem mudar a largura, a cor do texto acompanha o fundo e título longo
-  encolhe a fonte para caber. Vale em qualquer `view` (com `split=True`, cada figura recebe o
-  título) e segue também como `<title>` do SVG. `None` (padrão) não desenha nada nem reserva espaço.
+- **`background`**: `"dark"` (#0a0a0a), `"light"` (#ffffff) ou `"transparent"` (padrão). As
+  cores da legenda se adaptam ao fundo escolhido.
+- **`title`**: quando informado, sai em negrito, centralizado em relação ao corpo, acima do
+  desenho; título longo encolhe a fonte para caber e o texto segue também como `<title>` do
+  SVG. Com `split=True`, cada figura recebe o título.
 
 A **legenda** (barra de valores mín..máx, rótulo conforme `lang`) e o **degradê térmico** sobre
-o corpo são nativos: sempre presentes, sem parâmetro. Ex.: `am.heatmap(dados, background="dark")`.
+o corpo são nativos: sempre presentes, sem parâmetro. A escala da legenda conta só valor que
+realmente pinta (agregador coberto pelos filhos não entra), e os marcadores ganham casas
+decimais quando arredondar para inteiro repetiria dois deles.
 
 ## Nomes de região
 
@@ -129,56 +119,93 @@ chave do seu `region_map`. Nada é adivinhado, então não existe uma segunda gr
 a mesma região. Nome desconhecido levanta `ResolutionError`, listando o que falhou e sugerindo
 o mais parecido. Controle com `on_unknown`: `"error"` (padrão), `"skip"` ou `"warn"`.
 
-**No código: o enum `Region`.** `from anatomapa import Region` traz 30 constantes: os 14 ids
-canônicos mais as versões `_LEFT`/`_RIGHT` das 8 bilaterais. Cada membro é a própria string do
-id (`Region.TRUNK == "trunk"`), então vale como chave de `heatmap()` ou valor de `region_map`.
+**No código: o enum `Region`.** `from anatomapa import Region` traz 94 constantes: os 32 ids
+canônicos mais as versões `_LEFT`/`_RIGHT` das 31 bilaterais. Cada membro é a própria string do
+id (`Region.HAND == "hand"`), então vale como chave de `heatmap()` ou valor de `region_map`.
 O ganho é autocomplete e typo virando erro imediato. `list(Region)` ou `list_regions()` listam.
 
-**Lateralidade.** As 8 bilaterais aceitam lado pelo sufixo do id: `Region.HAND_RIGHT` pinta só
-a direita; sem sufixo (`Region.HAND`), pinta os dois lados. Pedir lado em região central é erro.
+**Lateralidade.** Todas as regiões são bilaterais, menos `genital`, que é central. As bilaterais
+aceitam lado pelo sufixo do id: `Region.HAND_RIGHT` pinta só a direita; sem sufixo
+(`Region.HAND`), pinta os dois lados. O lado segue a convenção do **observador** (esquerda da
+imagem), não a anatômica. Pedir lado em região central é erro.
 
 **Seus nomes vindos da planilha: `region_map`.** Como os rótulos da sua fonte quase nunca
 batem com os ids, é você quem declara a correspondência, uma vez, no código. A chave é
 comparada exatamente como está na planilha, incluindo acento e caixa alta:
 
 ```python
-am.heatmap({Region.TRUNK: 50, Region.HAND_LEFT: 100})  # enum (ou "trunk"/"hand_left")
 am.heatmap(dados, region_map={"MÃO": Region.HAND, "ANTE-BRAÇO": Region.FOREARM})
 ```
 
 ## Regiões e hierarquia
 
-| Id | Região | Frente (`anterior`) | Costas (`posterior`) | Tem lado? |
-|---|---|:---:|:---:|:---:|
-| `head` | cabeça | ✓ | ✓ | não |
-| `trunk` | tronco (agregador) | ✓ | ✓ | não |
-| `chest` | peito | ✓ |  | não |
-| `abdomen` | abdômen | ✓ |  | não |
-| `pelvis` | pelve | ✓ |  | não |
-| `back` | dorso |  | ✓ | não |
-| `buttocks` | nádegas |  | ✓ | não |
-| `arm` | braço e ombro | ✓ | ✓ | sim |
-| `forearm` | antebraço | ✓ | ✓ | sim |
-| `hand` | mão | ✓ | ✓ | sim |
-| `finger` | dedos da mão | ✓ | ✓ | sim |
-| `thigh` | coxa | ✓ | ✓ | sim |
-| `leg` | perna | ✓ | ✓ | sim |
-| `foot` | pé | ✓ | ✓ | sim |
-| `toe` | dedos do pé | ✓ | ✓ | sim |
+São **32 regiões** numa árvore de até 3 níveis. Região **agregadora** não tem desenho próprio:
+um valor nela desce para os filhos. Entre parênteses, a vista onde a região desenha:
 
-Das **15 regiões**, `trunk` é o agregador: sem geometria própria, pinta os filhos da vista
-desenhada (frente, `chest`+`abdomen`+`pelvis`; costas, `back`+`buttocks`). As bilaterais aceitam
-sufixo `_left`/`_right`; sem sufixo, pintam os dois lados. `list_regions(view=...)` filtra por vista.
-
-**Rollup (herança pai para filhos).** Mande o dado no nível que você tiver:
-
-```python
-am.heatmap({"trunk": 2602})                                # chest+abdomen+pelvis+back herdam
-am.heatmap({"chest": 900, "abdomen": 1200, "pelvis": 500})  # ou por parte
+```text
+head           Cabeça (agregadora)
+├─ face            Face (frente)
+├─ skull           Crânio (costas)
+└─ neck            Pescoço (frente e costas)
+trunk          Tronco (agregadora)
+├─ shoulder        Ombro (frente e costas)
+├─ chest           Peito (agregadora)
+│  ├─ upper_chest      Peito superior (frente)
+│  └─ lower_chest      Peito inferior (frente)
+├─ abdomen         Abdômen (agregadora)
+│  ├─ upper_abdomen    Abdômen superior (frente)
+│  └─ lower_abdomen    Abdômen inferior (frente)
+├─ back            Costas (agregadora)
+│  ├─ upper_back       Dorso (costas)
+│  └─ lower_back       Região lombar (costas)
+└─ genital         Região genital (frente; a única central)
+arm            Membro superior (agregadora)
+├─ upper_arm       Braço (frente e costas)
+├─ elbow           Cotovelo (frente e costas)
+├─ forearm         Antebraço (frente e costas)
+├─ wrist           Punho (frente e costas)
+└─ hand            Mão (frente e costas)
+   └─ finger           Dedos da mão (frente e costas)
+leg            Membro inferior (agregadora)
+├─ hip             Quadril (frente)
+├─ buttocks        Nádegas (costas)
+├─ thigh           Coxa (frente e costas)
+├─ knee            Joelho (frente e costas)
+├─ lower_leg       Perna (frente e costas)
+├─ ankle           Tornozelo (frente e costas)
+└─ foot            Pé (frente e costas)
+   └─ toe              Dedos do pé (frente e costas)
 ```
 
-Um valor no pai desce automaticamente pros filhos; se você informar a parte específica, ela
-usa o próprio valor. Mesma lógica em `hand` para `finger` e `foot` para `toe`.
+**Herança (rollup), consciente de lado.** Mande o dado no nível que você tiver. Para pintar
+cada região, a lib sobe pela árvore e usa o primeiro ancestral com valor. Três regras:
+
+1. Sobe até achar um valor e para no primeiro.
+2. Em cada degrau, o lado explícito vence o geral (`foot_left` antes de `foot`).
+3. Região mais funda vence ancestral mais raso: em `{"leg_left": 10, "foot": 2}`,
+   o pé esquerdo vale 2, não 10.
+
+O caso real de perícia é descrever um lado no geral e o outro em detalhe:
+
+```python
+am.heatmap({
+    Region.LEG_RIGHT: 8,       # membro inferior direito inteiro
+    Region.THIGH_LEFT: 2,      # esquerdo detalhado segmento a segmento
+    Region.LOWER_LEG_LEFT: 9,
+    Region.FOOT_LEFT: 4,
+})
+```
+
+À direita, tudo de `hip` a `foot` sai em 8. À esquerda pinta só o declarado, mais `toe_left`
+herdando 4 do pé; `hip_left` e `buttocks_left` ficam sem valor e não pintam. Quem detalha
+assume a responsabilidade de cobrir tudo que quer pintar.
+
+**Migrando da 0.3 (quebras).** `leg` e `arm` mudaram de significado: `leg` era a panturrilha
+(agora `lower_leg`) e `arm` era o braço acima do cotovelo (agora `upper_arm`); hoje são os
+membros inteiros. Como o código antigo continua rodando e pinta outra coisa, usar `leg` ou
+`arm` emite `DeprecationWarning` apontando a sua linha e o id novo. `pelvis` deixou de existir:
+virou `hip`, filho de `leg`. `buttocks` também mudou para `leg`, então valor em `trunk` não
+pinta mais as nádegas. `chest`, `abdomen` e `back` seguem válidos, mas viraram agregadores.
 
 **Região sem dado.** Região sem valor sai nativamente em **cinza neutro** (#9aa0a6),
 distinto do frio: "sem dado" não se confunde com "poucos casos". Sem parâmetro.
@@ -191,16 +218,12 @@ todos os leitores vai direto, sem conversão:
 ```python
 # dict puro (ou normalizado via from_dict)
 fig = am.heatmap(am.from_dict({"hand": 10, "foot": 25}))
-
 # CSV: você declara as colunas, nada é adivinhado
 dados = am.from_csv("lesoes.csv", region_col="regiao", value_col="total", delimiter=",")
-
 # JSON: objeto {"hand": 10} ou lista [{"region": "...", "value": ...}]
 dados = am.from_json("lesoes.json", region_key="region", value_key="value")
-
 # Registros: dicts, namedtuples, dataclasses e DataFrame do pandas (duck typing)
 dados = am.from_records(registros, region_col="regiao", value_col="total")
-
 # Excel .xlsx, sem dependência externa; coluna por índice, letra "D" ou nome do cabeçalho
 dados = am.from_xlsx("lesoes.xlsx", sheet="2024", region_col="Região",
                      value_col="Total", header=True)
@@ -220,34 +243,10 @@ ocorrências de cada região e `"sum"` soma os valores. `None` (padrão) espera 
 | `str(fig)`       | idem `to_svg()`, SVG puro (útil em templates) |
 | célula do Jupyter | renderiza inline automaticamente |
 
-Pra saída **raster** (PNG/JPG/JPEG), instale o extra opcional `pip install anatomapa[raster]`
-(traz cairosvg e Pillow, importados só sob demanda; o núcleo segue zero dependências e o SVG
-puro nunca precisa de extra). Qualquer figura rasteriza certo: na hora de virar PNG/JPG ela usa
-uma variante sem os filtros SVG (que os conversores raster não implementam), gerada sob demanda,
-então `am.heatmap(dados).save("mapa.png")`, `to_png()`, `to_jpeg()` e `format="png"` produzem a
-mesma imagem, com as mesmas cores e o mesmo visual térmico. Sem o extra instalado, pedir
-png/jpg/jpeg levanta `ImportError` com a dica de instalação.
-
-## Exemplo completo
-
-Topografia de picadas de escorpião (frequência por região), do dado bruto ao mapa final:
-
-```python
-import anatomapa as am
-from anatomapa import Region
-
-dados = {Region.HEAD: 845, Region.ARM: 1831, Region.FOREARM: 974, Region.HAND: 5153,
-         Region.FINGER: 8684, Region.TRUNK: 2602, Region.THIGH: 1733,
-         Region.LEG: 1984, Region.FOOT: 13666, Region.TOE: 6547}
-
-# 1. Confere os nomes antes de renderizar (dry-run, não gera nada)
-resultado = am.validate(dados)
-assert not resultado["unresolved"]
-
-# 2. Gera o mapa: visual térmico em fundo escuro
-fig = am.heatmap(dados, body="male", background="dark")
-fig.save("mapa.svg")
-```
+Pra saída **raster** (PNG/JPG/JPEG), instale o extra `pip install anatomapa[raster]` (cairosvg e
+Pillow, importados só sob demanda; o núcleo segue zero dependências). Qualquer figura rasteriza
+com as mesmas cores e o mesmo visual térmico do SVG. Sem o extra instalado, pedir png/jpg/jpeg
+levanta `ImportError` com a dica de instalação.
 
 ## Utilidades
 
@@ -262,19 +261,17 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 ```
 
 **`list_regions(lang="pt", body="male", view=None)`** lista as regiões, cada uma como
-`{"id", "label", "bilateral", "parent", "views"}`. Com `view`, filtra por vista:
+`{"id", "label", "bilateral", "parent", "views"}`. Com `view`, filtra por vista (agregadoras,
+de `views` vazio, sempre aparecem):
 
 ```python
 am.list_regions(view="posterior")
-# [{'id': 'head', ..., 'views': ['anterior', 'posterior']}, {'id': 'back', ...}, ...]
+# [{'id': 'head', ..., 'views': []}, {'id': 'skull', ..., 'views': ['posterior']}, ...]
 ```
 
 ## Galeria
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-maos.png?v=2" alt="Mãos com valores altos" width="300" />
-  &nbsp;
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/exemplo-perna-peito.png?v=2" alt="Pernas e peito com valores altos" width="300" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/fundos.png?v=2" alt="Mesmo mapa em fundo escuro, claro e transparente, masculino e feminino" width="640" />
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=2" alt="Modelo anatômico masculino e feminino" width="420" />
 </p>

@@ -21,7 +21,7 @@
   <img alt="Python 3.10+" src="https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=ffdd54" />
   <img alt="License MIT" src="https://img.shields.io/badge/License-MIT-green" />
   <img alt="zero dependencies" src="https://img.shields.io/badge/depend%C3%AAncias-zero%20(s%C3%B3%20stdlib)-orange" />
-  <a href="https://doi.org/10.5281/zenodo.22017924"><img alt="DOI" src="https://zenodo.org/badge/DOI/10.5281/zenodo.22017924.svg" /></a>
+  <a href="https://doi.org/10.5281/zenodo.22017924"><img alt="DOI" src="https://img.shields.io/badge/DOI-10.5281%2Fzenodo.22017924-1682D4?logo=doi&logoColor=white" /></a>
 </p>
 
 <p align="center">

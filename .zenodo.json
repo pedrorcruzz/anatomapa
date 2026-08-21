@@ -2,6 +2,8 @@
   "title": "anatomapa: a Python library for anatomical heatmaps of the human body surface",
   "upload_type": "software",
   "access_right": "open",
+  "version": "v0.4.5",
+  "publication_date": "2026-08-20",
   "license": "MIT",
   "language": "eng",
   "description": "<p>Python library for generating anatomical heatmaps of the human body surface, in anterior and posterior views, coloring regions by frequency, intensity or density of events. It accepts input as a dictionary, CSV, JSON or spreadsheet, and exports to SVG, PNG and JPEG.</p><p>The core has no external dependencies, relying only on the Python standard library, and the output is deterministic: the same input always produces the exact same file.</p><p><em>Biblioteca Python para gerar mapas de calor anatômicos da superfície externa do corpo humano, nas vistas anterior e posterior, colorindo regiões por frequência, intensidade ou densidade de eventos. O núcleo não possui dependências externas e a saída é determinística.</em></p><p><strong>Credits:</strong> Pedro Rosa (development and creation); Marcelo Reis (Professor of the Graduate Program in Environmental Systems Analysis, CESMAC); Mozart Melo (coordination and supervision, CESMAC).</p>",

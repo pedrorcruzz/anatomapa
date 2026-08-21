@@ -32,6 +32,8 @@ docs/
 template/
 app/tools/*
 !app/tools/coverage_check.py
+# Versionado porque o job verify do release.yml executa este script
+!app/tools/bump_version.py
 REGIOES.md
 
 # Imagens de validacao geradas localmente (a galeria versionada vive em assets/)

@@ -13,8 +13,30 @@ permissions:
   contents: write
 
 jobs:
+  verify:
+    name: Verificar versão declarada
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.t.outputs.tag }}
+    steps:
+      - name: Resolver tag
+        id: t
+        run: |
+          TAG="${{ github.event.inputs.tag }}"
+          [ -z "$TAG" ] && TAG="${GITHUB_REF_NAME}"
+          echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ steps.t.outputs.tag }}
+      # Portão obrigatório: o Zenodo arquiva o tarball DA TAG, então pyproject,
+      # __init__, CITATION.cff e .zenodo.json têm que já estar certos aqui.
+      # Falhar antes de criar o release impede o webhook do Zenodo de disparar.
+      - name: Conferir os 4 arquivos de versão contra a tag
+        run: python3 app/tools/bump_version.py --check "${{ steps.t.outputs.tag }}"
+
   release:
     name: Publicar GitHub Release
+    needs: verify
     runs-on: ubuntu-latest
     outputs:
       tag: ${{ steps.t.outputs.tag }}
@@ -27,8 +49,7 @@ jobs:
       - name: Resolver tag e tipo
         id: t
         run: |
-          TAG="${{ github.event.inputs.tag }}"
-          [ -z "$TAG" ] && TAG="${GITHUB_REF_NAME}"
+          TAG="${{ needs.verify.outputs.tag }}"
           echo "tag=${TAG}" >> "$GITHUB_OUTPUT"
           if echo "$TAG" | grep -qiE '\-(beta|rc)'; then
             echo "prerelease=true" >> "$GITHUB_OUTPUT"
@@ -70,16 +91,10 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - name: Definir versão pela tag
-        run: |
-          TAG="${{ needs.release.outputs.tag }}"
-          VERSION="${TAG#v}"
-          # Normaliza pré-lançamentos para PEP 440: -beta.N->bN, -rc.N->rcN, -alpha.N->aN
-          VERSION=$(echo "$VERSION" | sed -E 's/-beta\.?/b/; s/-rc\.?/rc/; s/-alpha\.?/a/')
-          echo "Versão derivada da tag: ${VERSION}"
-          sed -i -E "s/^version = \".*\"/version = \"${VERSION}\"/" pyproject.toml
-          sed -i -E "s/^__version__ = \".*\"/__version__ = \"${VERSION}\"/" app/anatomapa/__init__.py
-          grep -E '^version|^__version__' pyproject.toml app/anatomapa/__init__.py
+      # A versão vem commitada na tag, não é mais reescrita aqui: o job verify
+      # garantiu que ela bate. Este passo só deixa o valor visível no log.
+      - name: Mostrar a versão do pacote
+        run: grep -E '^version|^__version__' pyproject.toml app/anatomapa/__init__.py
       - name: Build
         run: |
           python -m pip install --upgrade build

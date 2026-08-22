@@ -1,35 +1,31 @@
-@import './base.css';
+@import 'tailwindcss';
 
-#app {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  font-weight: normal;
+@theme {
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #141414;
+  --color-border: #262626;
+  --color-ink: #f5f5f5;
+  --color-ink-muted: #a3a3a3;
+  --color-accent: #ff8200;
+
+  --color-thermal-0: #0a0c50;
+  --color-thermal-1: #0037dc;
+  --color-thermal-2: #00aaeb;
+  --color-thermal-3: #00d778;
+  --color-thermal-4: #96e100;
+  --color-thermal-5: #fadc00;
+  --color-thermal-6: #ffaf00;
+  --color-thermal-7: #ff8200;
 }
 
-a,
-.green {
-  text-decoration: none;
-  color: hsla(160, 100%, 37%, 1);
-  transition: 0.4s;
-  padding: 3px;
-}
-
-@media (hover: hover) {
-  a:hover {
-    background-color: hsla(160, 100%, 37%, 0.2);
+@layer base {
+  html {
+    color-scheme: dark;
   }
-}
 
-@media (min-width: 1024px) {
   body {
-    display: flex;
-    place-items: center;
-  }
-
-  #app {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    padding: 0 2rem;
+    min-height: 100vh;
+    background-color: var(--color-surface);
+    color: var(--color-ink);
   }
 }

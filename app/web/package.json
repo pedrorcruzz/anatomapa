@@ -1,18 +1,20 @@
 {
-  "name": "web",
+  "name": "anatomapa-web",
   "version": "0.0.0",
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/runtime.mjs && vite",
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
-    "build-only": "vite build",
+    "runtime": "node scripts/runtime.mjs",
+    "build-only": "node scripts/runtime.mjs && vite build",
     "type-check": "vue-tsc --build",
     "format": "prettier --write --experimental-cli src/"
   },
   "dependencies": {
+    "pyodide": "^314.0.5",
     "vue": "^3.5.40",
     "vue-router": "^5.2.0"
   },

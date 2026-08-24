@@ -289,7 +289,7 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
 Distribuído sob a licença **MIT**. Veja o arquivo [LICENSE](https://github.com/pedrorcruzz/anatomapa/blob/main/LICENSE).
 
 As silhuetas dos modelos SVG derivam de fonte em **domínio público (CC0)**; detalhes em
-[`app/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/app/anatomapa/assets/ATTRIBUTION.txt).
+[`apps/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/apps/anatomapa/assets/ATTRIBUTION.txt).
 
 ## Créditos
 

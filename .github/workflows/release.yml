@@ -32,7 +32,7 @@ jobs:
       # __init__, CITATION.cff e .zenodo.json têm que já estar certos aqui.
       # Falhar antes de criar o release impede o webhook do Zenodo de disparar.
       - name: Conferir os 4 arquivos de versão contra a tag
-        run: python3 app/tools/bump_version.py --check "${{ steps.t.outputs.tag }}"
+        run: python3 apps/tools/bump_version.py --check "${{ steps.t.outputs.tag }}"
 
   release:
     name: Publicar GitHub Release
@@ -94,7 +94,7 @@ jobs:
       # A versão vem commitada na tag, não é mais reescrita aqui: o job verify
       # garantiu que ela bate. Este passo só deixa o valor visível no log.
       - name: Mostrar a versão do pacote
-        run: grep -E '^version|^__version__' pyproject.toml app/anatomapa/__init__.py
+        run: grep -E '^version|^__version__' pyproject.toml apps/anatomapa/__init__.py
       - name: Build
         run: |
           python -m pip install --upgrade build

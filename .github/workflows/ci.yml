@@ -25,7 +25,7 @@ jobs:
 
       - name: Guarda de zero dependências
         run: |
-          if [ -f requirements.txt ] || [ -f app/requirements.txt ]; then
+          if [ -f requirements.txt ] || [ -f apps/requirements.txt ]; then
             echo "Arquivo de requirements encontrado: a lib deve ser zero-dep (so stdlib)."
             exit 1
           fi

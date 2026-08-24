@@ -12,7 +12,7 @@ function resolvePython() {
   if (process.env.ANATOMAPA_PYTHON) {
     return process.env.ANATOMAPA_PYTHON
   }
-  const venvPython = join(repoRoot, 'app', 'venv', 'bin', 'python')
+  const venvPython = join(repoRoot, 'apps', 'venv', 'bin', 'python')
   return existsSync(venvPython) ? venvPython : 'python3'
 }
 

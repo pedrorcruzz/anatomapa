@@ -32,28 +32,35 @@ jobs:
           echo "OK: sem arquivos de dependências."
 
       - name: Verificar import da lib (só stdlib)
-        working-directory: app
-        run: |
-          if [ -d anatomapa ]; then
-            python -c "import anatomapa; print('import OK')"
-          else
-            echo "Pacote anatomapa ainda nao criado, pulando."
-          fi
+        working-directory: apps
+        run: python -c "import anatomapa; print('import OK')"
 
       - name: Rodar testes (unittest, stdlib)
-        working-directory: app
-        run: |
-          if [ -d tests ]; then
-            python -m unittest discover -s tests -t . -v
-          else
-            echo "Pasta de testes ainda nao criada, pulando."
-          fi
+        working-directory: apps
+        run: python -m unittest discover -s tests -t . -v
 
       - name: Cobertura mínima 90% (stdlib trace, zero-dep)
-        working-directory: app
-        run: |
-          if [ -d tests ] && [ -f tools/coverage_check.py ]; then
-            python tools/coverage_check.py --min 90
-          else
-            echo "Sem testes ou ferramenta de cobertura, pulando."
-          fi
+        working-directory: apps
+        run: python tools/coverage_check.py --min 90
+
+  web:
+    name: Testes do site (TypeScript + Vitest)
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Instalar dependências do site
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      - name: Checar tipos
+        working-directory: apps/web
+        run: bun run type-check
+
+      - name: Rodar testes (vitest)
+        working-directory: apps/web
+        run: bun run test:unit --run

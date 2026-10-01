@@ -16,7 +16,7 @@ defineProps<{
       class="mx-auto flex max-w-7xl flex-col items-center justify-between gap-2 px-4 py-6 text-xs text-ink-muted sm:flex-row sm:px-6"
     >
       <p>
-        anatomapa<template v-if="version"> · v{{ version }}</template> · Centro Universitário CESMAC · MIT
+        Anatomapa<template v-if="version"> · v{{ version }}</template> · Centro Universitário CESMAC · MIT
         ·
         {{ form.t('footer.madeBy') }}
         <a class="font-medium text-ink-muted transition-colors hover:text-primary" :href="AUTHOR_GITHUB_URL" target="_blank" rel="noreferrer">

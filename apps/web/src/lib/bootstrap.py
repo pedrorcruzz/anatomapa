@@ -54,3 +54,47 @@ def validate_values(payload: str) -> str:
 
     request = json.loads(payload)
     return json.dumps(anatomapa.validate(request["values"], **request["options"]))
+
+
+def list_xlsx_sheets(payload: str) -> str:
+    """Return the JSON list of sheet names in an uploaded .xlsx file.
+
+    Parameters
+    ----------
+    payload:
+        JSON string with the FS path of the uploaded file.
+    """
+    import anatomapa
+
+    path = json.loads(payload)
+    return json.dumps(anatomapa.list_sheets(path))
+
+
+def preview_xlsx(payload: str) -> str:
+    """Return the JSON preview (sheets, headers, sample rows) of an uploaded .xlsx file.
+
+    Parameters
+    ----------
+    payload:
+        JSON object with "path" and "options" (keyword arguments accepted by
+        anatomapa.preview_xlsx: sheet, header, n_rows).
+    """
+    import anatomapa
+
+    request = json.loads(payload)
+    return json.dumps(anatomapa.preview_xlsx(request["path"], **request["options"]))
+
+
+def read_xlsx(payload: str) -> str:
+    """Return the JSON region-to-value mapping parsed from an uploaded .xlsx file.
+
+    Parameters
+    ----------
+    payload:
+        JSON object with "path" and "options" (keyword arguments accepted by
+        anatomapa.from_xlsx: sheet, region_col, value_col, header, aggregate).
+    """
+    import anatomapa
+
+    request = json.loads(payload)
+    return json.dumps(anatomapa.from_xlsx(request["path"], **request["options"]))

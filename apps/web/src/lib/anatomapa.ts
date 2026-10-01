@@ -48,6 +48,30 @@ export interface ValidationReport {
   unresolved: Record<string, UnresolvedLabel>
 }
 
+export interface XlsxPreviewOptions {
+  sheet?: string | null
+  header?: boolean
+  nRows?: number
+}
+
+export interface XlsxPreview {
+  sheets: string[]
+  sheet: string
+  headers: string[] | null
+  rows: string[][]
+  columns: number
+}
+
+export type XlsxAggregate = 'count' | 'sum' | null
+
+export interface XlsxReadOptions {
+  sheet?: string | null
+  regionCol: number | string
+  valueCol: number | string
+  header?: boolean
+  aggregate?: XlsxAggregate
+}
+
 export interface WheelManifest {
   wheel: string
   version: string
@@ -65,10 +89,15 @@ export interface Anatomapa {
   heatmap(values: Values, options?: HeatmapOptions): string
   listRegions(options?: ListRegionsOptions): RegionInfo[]
   validate(values: Values, options?: ValidateOptions): ValidationReport
+  writeXlsxFile(bytes: Uint8Array): string
+  listXlsxSheets(path: string): string[]
+  previewXlsx(path: string, options?: XlsxPreviewOptions): XlsxPreview
+  readXlsx(path: string, options: XlsxReadOptions): Values
 }
 
 const WHEEL_PATH = '/tmp/anatomapa.whl'
 const SITE_PACKAGES = '/lib/anatomapa'
+const XLSX_PATH = '/tmp/upload.xlsx'
 
 const HEATMAP_KEYS: Record<string, string> = {
   view: 'view',
@@ -89,6 +118,20 @@ const LIST_REGIONS_KEYS: Record<string, string> = {
 const VALIDATE_KEYS: Record<string, string> = {
   body: 'body',
   regionMap: 'region_map',
+}
+
+const XLSX_PREVIEW_KEYS: Record<string, string> = {
+  sheet: 'sheet',
+  header: 'header',
+  nRows: 'n_rows',
+}
+
+const XLSX_READ_KEYS: Record<string, string> = {
+  sheet: 'sheet',
+  regionCol: 'region_col',
+  valueCol: 'value_col',
+  header: 'header',
+  aggregate: 'aggregate',
 }
 
 export function joinBase(base: string, path: string): string {
@@ -186,6 +229,25 @@ export async function loadAnatomapa(options: LoadOptions = {}): Promise<Anatomap
       return call<ValidationReport>('validate_values', {
         values,
         options: toPythonOptions(validateOptions, VALIDATE_KEYS),
+      })
+    },
+    writeXlsxFile(bytes) {
+      pyodide.FS.writeFile(XLSX_PATH, bytes)
+      return XLSX_PATH
+    },
+    listXlsxSheets(path) {
+      return call<string[]>('list_xlsx_sheets', path)
+    },
+    previewXlsx(path, previewOptions = {}) {
+      return call<XlsxPreview>('preview_xlsx', {
+        path,
+        options: toPythonOptions(previewOptions, XLSX_PREVIEW_KEYS),
+      })
+    },
+    readXlsx(path, readOptions) {
+      return call<Values>('read_xlsx', {
+        path,
+        options: toPythonOptions(readOptions, XLSX_READ_KEYS),
       })
     },
   }

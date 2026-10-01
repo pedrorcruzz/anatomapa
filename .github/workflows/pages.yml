@@ -1,0 +1,63 @@
+name: Deploy do site (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build do site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Setup Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      # Só pro build do wheel embutido no site; a lib publicada continua zero-dep,
+      # isso não entra no pacote nem roda nos testes da lib.
+      - name: Instalar ferramenta de build do wheel
+        run: python -m pip install --upgrade build setuptools
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Instalar dependências do site
+        working-directory: apps/web
+        run: bun install --frozen-lockfile
+
+      # Gera o wheel da lib a partir do commit atual, copia o runtime Pyodide
+      # e builda o bundle Vite. O wheel embutido é sempre o da lib nesse mesmo
+      # commit, então mudança só na lib também redeploya o site.
+      - name: Build
+        working-directory: apps/web
+        run: bun run build
+
+      - name: Preparar artefato do Pages
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Publicar no GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

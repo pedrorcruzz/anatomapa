@@ -14,7 +14,7 @@ from anatomapa.model import loader as _loader
 from anatomapa.readers.csv_reader import from_csv
 from anatomapa.readers.json_reader import from_json
 from anatomapa.readers.native import from_dict, from_records
-from anatomapa.readers.xlsx_reader import from_xlsx
+from anatomapa.readers.xlsx_reader import from_xlsx, list_sheets, preview_xlsx
 from anatomapa.regions import Region
 from anatomapa.render.base import Figure
 from anatomapa.render.svg import SvgRenderer, compose_views as _compose_views
@@ -30,6 +30,8 @@ __all__ = [
     "from_dict",
     "from_records",
     "from_xlsx",
+    "list_sheets",
+    "preview_xlsx",
     "list_regions",
     "resolve",
     "Region",

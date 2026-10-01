@@ -28,6 +28,12 @@
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=7" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
 </p>
 
+<p align="center">
+  <a href="https://pedrorcruzz.github.io/anatomapa/"><strong>▶ Teste direto no navegador, sem instalar nada</strong></a><br/>
+  A mesma biblioteca, rodando no seu navegador via Pyodide: digite os valores à mão ou importe uma
+  planilha. Nada é enviado pra fora, o dado nunca sai da sua máquina.
+</p>
+
 ## Sobre
 
 **anatomapa** é uma biblioteca Python para gerar **mapas de calor anatômicos** da superfície externa

@@ -28,6 +28,12 @@
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero-en.png?v=7" alt="Male and female anatomical heatmap with legend" width="720" />
 </p>
 
+<p align="center">
+  <a href="https://pedrorcruzz.github.io/anatomapa/"><strong>▶ Try it in your browser, no install needed</strong></a><br/>
+  Same library, running client-side via Pyodide: type values by hand or import a spreadsheet.
+  Nothing is uploaded, your data never leaves your machine.
+</p>
+
 ## About
 
 **anatomapa** is a Python library that generates **anatomical heatmaps** of the external human body

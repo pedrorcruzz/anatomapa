@@ -7,7 +7,7 @@ archives the release by downloading the tarball at that tag and reading
 
 Files touched:
     pyproject.toml            version         (PEP 440)
-    app/anatomapa/__init__.py __version__     (PEP 440)
+    apps/anatomapa/__init__.py __version__     (PEP 440)
     CITATION.cff              version, date-released
     .zenodo.json              version, publication_date
 
@@ -28,7 +28,7 @@ import sys
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 PYPROJECT = os.path.join(ROOT, "pyproject.toml")
-INIT = os.path.join(ROOT, "app", "anatomapa", "__init__.py")
+INIT = os.path.join(ROOT, "apps", "anatomapa", "__init__.py")
 CITATION = os.path.join(ROOT, "CITATION.cff")
 ZENODO = os.path.join(ROOT, ".zenodo.json")
 
@@ -150,7 +150,7 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         if drifted:
             print(f"versão fora de sincronia com {args.tag}: {', '.join(rel)}")
-            print(f"corrija com: python3 app/tools/bump_version.py {args.tag}")
+            print(f"corrija com: python3 apps/tools/bump_version.py {args.tag}")
             return 1
         print(f"versão sincronizada com {args.tag} nos 4 arquivos")
         return 0

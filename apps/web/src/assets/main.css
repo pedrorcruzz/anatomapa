@@ -1,0 +1,148 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-bg: #f0f2f4;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f6f7f9;
+  --color-border: #e2e6ea;
+  --color-ink: #000000;
+  /* #58697f, não o #8491a4 original: esse dá só 3.4:1 sobre branco, abaixo do
+     mínimo 4.5:1 do WCAG 2 AA para texto normal. */
+  --color-ink-muted: #58697f;
+  --color-primary: #0068ab;
+  --color-primary-hover: #00578f;
+  --color-accent: #f9cd29;
+
+  --color-thermal-0: #0a0c50;
+  --color-thermal-1: #0037dc;
+  --color-thermal-2: #00aaeb;
+  --color-thermal-3: #00d778;
+  --color-thermal-4: #96e100;
+  --color-thermal-5: #fadc00;
+  --color-thermal-6: #ffaf00;
+  --color-thermal-7: #ff8200;
+}
+
+/* Tema escuro: mesma paleta da logo (fundo azul-marinho, degradê frio->quente). */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --color-bg: #0a1120;
+  --color-surface: #141d35;
+  --color-surface-soft: #101828;
+  --color-border: #263054;
+  --color-ink: #f3f5fa;
+  --color-ink-muted: #8d97b8;
+  --color-primary: #3b82f6;
+  --color-primary-hover: #2563eb;
+  --color-accent: #f97316;
+}
+
+@layer base {
+  html {
+    color-scheme: light;
+  }
+
+  body {
+    min-height: 100vh;
+    background-color: var(--color-bg);
+    background-image:
+      radial-gradient(60rem 32rem at 12% -12%, color-mix(in srgb, var(--color-primary) 12%, transparent), transparent 70%),
+      radial-gradient(50rem 28rem at 110% 10%, color-mix(in srgb, var(--color-accent) 10%, transparent), transparent 65%);
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+    color: var(--color-ink);
+    transition: background-color 0.15s ease, color 0.15s ease;
+  }
+
+  button:not(:disabled),
+  select:not(:disabled),
+  input[type='checkbox']:not(:disabled),
+  input[type='radio']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled {
+    cursor: not-allowed;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  /* Setas nativas do input number fora: o stepper próprio fica no componente. */
+  input[type='number'] {
+    appearance: textfield;
+    -moz-appearance: textfield;
+  }
+
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    appearance: none;
+    margin: 0;
+  }
+
+  /* Barra de rolagem fina e no tom do tema, em vez da nativa do SO. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-ink-muted);
+  }
+
+  /* Xadrez clássico de "sem fundo" (igual Photoshop/Figma). Tons fixos, não
+     os do tema: a lib desenha o título e os números da legenda em texto
+     claro quando a figura é "transparent" (mesma regra do fundo "dark"),
+     então o xadrez precisa ficar escuro o bastante pra esse texto continuar
+     legível, nos dois temas do site. */
+  .bg-checkerboard {
+    background-color: #2b3242;
+    background-image:
+      linear-gradient(45deg, #3c4456 25%, transparent 25%),
+      linear-gradient(-45deg, #3c4456 25%, transparent 25%),
+      linear-gradient(45deg, transparent 75%, #3c4456 75%),
+      linear-gradient(-45deg, transparent 75%, #3c4456 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+  }
+
+  /* O SVG da lib não traz width/height, só viewBox, então sem isto ele vira
+     um elemento substituído que preenche a largura do container e deriva a
+     altura dali. Isso é ótimo pra "ambas" (par lado a lado, bem largo), mas
+     faz uma vista única (mais estreita/alta) inflar a própria altura do
+     container, deixando a figura gigante. Travar a proporção do container na
+     proporção de "ambas" resolve: a altura vira sempre função da largura
+     (responsiva em qualquer tela), nunca do conteúdo, e cada vista usa essa
+     mesma altura, só variando a própria largura pela razão de aspecto dela. */
+  .map-canvas {
+    aspect-ratio: 1366 / 960;
+    width: 100%;
+  }
+
+  .map-canvas svg {
+    display: block;
+    width: auto;
+    height: 100%;
+    max-width: 100%;
+  }
+}

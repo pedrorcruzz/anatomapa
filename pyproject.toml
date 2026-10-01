@@ -42,7 +42,7 @@ Homepage = "https://github.com/pedrorcruzz/anatomapa"
 Repository = "https://github.com/pedrorcruzz/anatomapa"
 
 [tool.setuptools.packages.find]
-where = ["app"]
+where = ["apps"]
 include = ["anatomapa*"]
 
 # Empacota os assets do modelo (SVGs + regions.json + atribuição) dentro do wheel.

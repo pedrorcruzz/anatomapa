@@ -28,6 +28,12 @@
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero-en.png?v=7" alt="Male and female anatomical heatmap with legend" width="720" />
 </p>
 
+<p align="center">
+  <a href="https://pedrorcruzz.github.io/anatomapa/"><strong>▶ Try it in your browser, no install needed</strong></a><br/>
+  Same library, running client-side via Pyodide: type values by hand or import a spreadsheet.
+  Nothing is uploaded, your data never leaves your machine.
+</p>
+
 ## About
 
 **anatomapa** is a Python library that generates **anatomical heatmaps** of the external human body
@@ -284,31 +290,12 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=7" alt="Male and female anatomical model" width="420" />
 </p>
 
-## Citation
-
-Every release is archived on Zenodo with a permanent DOI. Cite the concept DOI below: it
-always resolves to the latest archived version.
-
-```bibtex
-@software{rosa_anatomapa,
-  author    = {Rosa, Pedro and Reis, Marcelo and Melo, Mozart},
-  title     = {anatomapa: a Python library for anatomical heatmaps
-               of the human body surface},
-  publisher = {Zenodo},
-  doi       = {10.5281/zenodo.22017924},
-  url       = {https://doi.org/10.5281/zenodo.22017924}
-}
-```
-
-GitHub also generates the citation for you: use the **Cite this repository** button in the
-sidebar, backed by [`CITATION.cff`](https://github.com/pedrorcruzz/anatomapa/blob/main/CITATION.cff).
-
 ## License and attribution
 
 Released under the **MIT** license. See [LICENSE](https://github.com/pedrorcruzz/anatomapa/blob/main/LICENSE).
 
 The SVG model silhouettes derive from a **public-domain (CC0)** source; details in
-[`app/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/app/anatomapa/assets/ATTRIBUTION.txt).
+[`apps/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/apps/anatomapa/assets/ATTRIBUTION.txt).
 
 ## Credits
 

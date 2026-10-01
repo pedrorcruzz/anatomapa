@@ -278,6 +278,126 @@ def _resolve_col_index(
     )
 
 
+def _open_zip(source: Union[str, os.PathLike, bytes, io.IOBase]) -> zipfile.ZipFile:
+    """Open a .xlsx source as a zip archive.
+
+    Parameters
+    ----------
+    source:
+        File path, path-like object, bytes, or binary file-like object.
+
+    Returns
+    -------
+    zipfile.ZipFile
+        Open archive, ready to be used as a context manager.
+    """
+    if isinstance(source, bytes):
+        return zipfile.ZipFile(io.BytesIO(source), "r")
+    return zipfile.ZipFile(source, "r")
+
+
+def list_sheets(source: Union[str, os.PathLike, bytes, io.IOBase]) -> list[str]:
+    """List the sheet names of an Excel (.xlsx) workbook, in workbook order.
+
+    Parameters
+    ----------
+    source:
+        File path, path-like object, bytes, or binary file-like object.
+
+    Returns
+    -------
+    list[str]
+        Sheet names as they appear in the workbook.
+    """
+    with _open_zip(source) as zf:
+        sheet_list = _parse_workbook_sheets(zf)
+    return [name for name, _ in sheet_list]
+
+
+def preview_xlsx(
+    source: Union[str, os.PathLike, bytes, io.IOBase],
+    sheet: str | None = None,
+    header: bool = True,
+    n_rows: int = 5,
+) -> dict:
+    """Preview the sheets and the first rows of an Excel (.xlsx) workbook.
+
+    Meant to help a caller choose region_col/value_col for from_xlsx before
+    committing to a layout: shows what sheets exist and what the chosen
+    sheet's first rows look like, without converting a single value.
+
+    Parameters
+    ----------
+    source:
+        File path, path-like object, bytes, or binary file-like object.
+    sheet:
+        Name of the sheet to preview. None uses the first sheet in the workbook.
+    header:
+        True treats the first row as a header, split out from the sample rows.
+    n_rows:
+        Maximum number of data rows to include in the sample.
+
+    Returns
+    -------
+    dict
+        {"sheets": [names], "sheet": chosen name, "headers": [str] | None,
+        "rows": [[str, ...], ...], "columns": int}. "headers" is None when
+        header=False; every row in "rows" is padded to "columns" width.
+
+    Raises
+    ------
+    ValueError
+        If the requested sheet does not exist.
+    """
+    with _open_zip(source) as zf:
+        shared_strings = _parse_shared_strings(zf)
+        sheet_list = _parse_workbook_sheets(zf)
+
+        if not sheet_list:
+            raise ValueError("Nenhuma aba encontrada no arquivo .xlsx.")
+
+        available_names = [name for name, _ in sheet_list]
+
+        if sheet is None:
+            chosen_name, sheet_path = sheet_list[0]
+        else:
+            matched = [(n, p) for n, p in sheet_list if n == sheet]
+            if not matched:
+                raise ValueError(
+                    f"Aba {sheet!r} não encontrada. "
+                    f"Abas disponíveis: {available_names}"
+                )
+            chosen_name, sheet_path = matched[0]
+
+        rows = _parse_worksheet(zf, sheet_path, shared_strings)
+
+    if not rows:
+        return {
+            "sheets": available_names,
+            "sheet": chosen_name,
+            "headers": None,
+            "rows": [],
+            "columns": 0,
+        }
+
+    width = max(len(row) for row in rows)
+    padded = [row + [""] * (width - len(row)) for row in rows]
+
+    headers: list[str] | None = None
+    data_rows = padded
+    if header:
+        headers = padded[0]
+        data_rows = padded[1:]
+
+    return {
+        "sheets": available_names,
+        "sheet": chosen_name,
+        "headers": headers,
+        "rows": data_rows[:n_rows],
+        "columns": width,
+    }
+
+
 def from_xlsx(
     source: Union[str, os.PathLike, bytes, io.IOBase],
     sheet: str | None = None,
@@ -322,15 +442,7 @@ def from_xlsx(
         If the requested sheet does not exist, the column is not found, or a
         value cannot be converted to a number.
     """
-    # Abre o zip: aceita caminho, bytes ou objeto binário
-    if isinstance(source, str):
-        zf = zipfile.ZipFile(source, "r")
-    elif isinstance(source, bytes):
-        zf = zipfile.ZipFile(io.BytesIO(source), "r")
-    else:
-        zf = zipfile.ZipFile(source, "r")
-
-    with zf:
+    with _open_zip(source) as zf:
         shared_strings = _parse_shared_strings(zf)
         sheet_list = _parse_workbook_sheets(zf)
 

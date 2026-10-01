@@ -17,6 +17,8 @@ from anatomapa.readers.xlsx_reader import (
     _resolve_col_index,
     _parse_worksheet,
     from_xlsx,
+    list_sheets,
+    preview_xlsx,
 )
 
 
@@ -850,6 +852,101 @@ class TestFacadeExposesFromXlsx(unittest.TestCase):
         import anatomapa
         result = anatomapa.from_xlsx(xlsx)
         self.assertEqual(result["head"], 10.0)
+
+
+# ---------------------------------------------------------------------------
+# Testes: list_sheets
+# ---------------------------------------------------------------------------
+
+class TestListSheets(unittest.TestCase):
+    def setUp(self):
+        self.xlsx_bytes = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            sheet2_rows=_ROWS_NO_HEADER,
+            shared_strings=_STRINGS,
+        )
+
+    def test_returns_sheet_names_in_order(self):
+        self.assertEqual(list_sheets(self.xlsx_bytes), ["Dados", "Extra"])
+
+    def test_accepts_file_object(self):
+        buf = io.BytesIO(self.xlsx_bytes)
+        self.assertEqual(list_sheets(buf), ["Dados", "Extra"])
+
+    def test_accepts_file_path(self):
+        with tempfile.NamedTemporaryFile(suffix=".xlsx", delete=False) as f:
+            f.write(self.xlsx_bytes)
+            path = f.name
+        try:
+            self.assertEqual(list_sheets(path), ["Dados", "Extra"])
+        finally:
+            os.unlink(path)
+
+    def test_importable_from_facade(self):
+        import anatomapa
+        self.assertIn("list_sheets", anatomapa.__all__)
+        self.assertTrue(callable(anatomapa.list_sheets))
+
+
+# ---------------------------------------------------------------------------
+# Testes: preview_xlsx
+# ---------------------------------------------------------------------------
+
+class TestPreviewXlsx(unittest.TestCase):
+    def setUp(self):
+        self.xlsx_bytes = build_xlsx_bytes(
+            sheet1_rows=_ROWS_WITH_HEADER,
+            sheet2_rows=_ROWS_NO_HEADER,
+            shared_strings=_STRINGS,
+        )
+
+    def test_lists_every_sheet_name(self):
+        result = preview_xlsx(self.xlsx_bytes)
+        self.assertEqual(result["sheets"], ["Dados", "Extra"])
+
+    def test_defaults_to_first_sheet(self):
+        result = preview_xlsx(self.xlsx_bytes)
+        self.assertEqual(result["sheet"], "Dados")
+
+    def test_splits_header_from_rows(self):
+        result = preview_xlsx(self.xlsx_bytes, header=True)
+        self.assertEqual(result["headers"], ["região", "valor"])
+        self.assertEqual(result["rows"][0], ["head", "10"])
+
+    def test_header_false_keeps_first_row_as_data(self):
+        result = preview_xlsx(self.xlsx_bytes, header=False)
+        self.assertIsNone(result["headers"])
+        self.assertEqual(result["rows"][0], ["região", "valor"])
+
+    def test_n_rows_limits_the_sample(self):
+        result = preview_xlsx(self.xlsx_bytes, n_rows=2)
+        self.assertEqual(len(result["rows"]), 2)
+
+    def test_selects_requested_sheet(self):
+        result = preview_xlsx(self.xlsx_bytes, sheet="Extra", header=False)
+        self.assertEqual(result["sheet"], "Extra")
+        self.assertEqual(result["rows"][0], ["head", "20"])
+
+    def test_unknown_sheet_raises_with_available_names(self):
+        with self.assertRaises(ValueError) as ctx:
+            preview_xlsx(self.xlsx_bytes, sheet="Inexistente")
+        self.assertIn("Extra", str(ctx.exception))
+
+    def test_columns_reports_the_widest_row(self):
+        result = preview_xlsx(self.xlsx_bytes)
+        self.assertEqual(result["columns"], 2)
+
+    def test_empty_sheet_returns_empty_preview(self):
+        xlsx = build_xlsx_bytes(sheet1_rows=[], shared_strings=[])
+        result = preview_xlsx(xlsx)
+        self.assertEqual(result["rows"], [])
+        self.assertIsNone(result["headers"])
+        self.assertEqual(result["columns"], 0)
+
+    def test_importable_from_facade(self):
+        import anatomapa
+        self.assertIn("preview_xlsx", anatomapa.__all__)
+        self.assertTrue(callable(anatomapa.preview_xlsx))
 
 
 if __name__ == "__main__":

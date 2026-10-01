@@ -28,6 +28,12 @@
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/hero.png?v=7" alt="Mapa de calor anatômico masculino e feminino, com legenda" width="720" />
 </p>
 
+<p align="center">
+  <a href="https://pedrorcruzz.github.io/anatomapa/"><strong>▶ Teste direto no navegador, sem instalar nada</strong></a><br/>
+  A mesma biblioteca, rodando no seu navegador via Pyodide: digite os valores à mão ou importe uma
+  planilha. Nada é enviado pra fora, o dado nunca sai da sua máquina.
+</p>
+
 ## Sobre
 
 **anatomapa** é uma biblioteca Python para gerar **mapas de calor anatômicos** da superfície externa
@@ -284,39 +290,12 @@ am.validate({"hand": 1, "haand": 2, "hand_right": 3})
   <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/screenshots/corpo-modelo.png?v=7" alt="Modelo anatômico masculino e feminino" width="420" />
 </p>
 
-## Como citar
-
-Toda release é arquivada no Zenodo com um DOI permanente. Cite o concept DOI abaixo, que
-sempre resolve para a versão mais recente arquivada.
-
-**ABNT:**
-
-> ROSA, Pedro; REIS, Marcelo; MELO, Mozart. **anatomapa**: a Python library for anatomical
-> heatmaps of the human body surface. Zenodo. DOI: 10.5281/zenodo.22017924. Disponível em:
-> https://doi.org/10.5281/zenodo.22017924.
-
-**BibTeX:**
-
-```bibtex
-@software{rosa_anatomapa,
-  author    = {Rosa, Pedro and Reis, Marcelo and Melo, Mozart},
-  title     = {anatomapa: a Python library for anatomical heatmaps
-               of the human body surface},
-  publisher = {Zenodo},
-  doi       = {10.5281/zenodo.22017924},
-  url       = {https://doi.org/10.5281/zenodo.22017924}
-}
-```
-
-O GitHub também gera a citação pronta: use o botão **Cite this repository** na barra
-lateral, alimentado pelo [`CITATION.cff`](https://github.com/pedrorcruzz/anatomapa/blob/main/CITATION.cff).
-
 ## Licença e atribuição
 
 Distribuído sob a licença **MIT**. Veja o arquivo [LICENSE](https://github.com/pedrorcruzz/anatomapa/blob/main/LICENSE).
 
 As silhuetas dos modelos SVG derivam de fonte em **domínio público (CC0)**; detalhes em
-[`app/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/app/anatomapa/assets/ATTRIBUTION.txt).
+[`apps/anatomapa/assets/ATTRIBUTION.txt`](https://github.com/pedrorcruzz/anatomapa/blob/main/apps/anatomapa/assets/ATTRIBUTION.txt).
 
 ## Créditos
 

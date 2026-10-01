@@ -13,7 +13,7 @@ import sys
 import unittest
 
 _ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-_TOOLS = os.path.join(_ROOT, "app", "tools")
+_TOOLS = os.path.join(_ROOT, "apps", "tools")
 
 _PYPROJECT = os.path.join(_ROOT, "pyproject.toml")
 _CITATION = os.path.join(_ROOT, "CITATION.cff")

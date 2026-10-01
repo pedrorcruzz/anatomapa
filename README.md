@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=7" width="120" alt="anatomapa" />
+  <img src="https://raw.githubusercontent.com/pedrorcruzz/anatomapa/main/assets/icon.svg?v=7" width="120" alt="Anatomapa" />
 </p>
 
-<h1 align="center">anatomapa</h1>
+<h1 align="center">Anatomapa</h1>
 
 <p align="center">
   <strong>Paint the human body with your data.</strong><br/>
@@ -36,7 +36,7 @@
 
 ## About
 
-**anatomapa** is a Python library that generates **anatomical heatmaps** of the external human body
+**Anatomapa** is a Python library that generates **anatomical heatmaps** of the external human body
 surface: you feed it values per region (frequency, intensity or event density) and it returns the body
 colored, front and back views, male or female, with color proportional to each region's value. It fits
 any field that records the body region: venomous animal accidents, occupational trauma, sports injuries, forensics, burns and dermatology.
@@ -304,4 +304,4 @@ The SVG model silhouettes derive from a **public-domain (CC0)** source; details 
 - **Mozart Melo**: coordinator/advisor, CESMAC
 - **Centro Universitário CESMAC**: institution
 
-<p align="center">⭐ <strong>If anatomapa helped you, leave a star on the repo!</strong> ⭐</p>
+<p align="center">⭐ <strong>If Anatomapa helped you, leave a star on the repo!</strong> ⭐</p>
